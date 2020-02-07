@@ -15,6 +15,18 @@ class Detect(object):
 
     def __init__(self):
 
+        self.img = cv2.imread("block_pattern.jpg", cv2.IMREAD_GRAYSCALE)  # queryiamge
+
+        # Features
+        self.sift = cv2.xfeatures2d.SIFT_create()
+        self.kp_image, self.desc_image = self.sift.detectAndCompute(self.img, None)
+        # Feature matching
+        index_params = dict(algorithm=0, trees=5)
+        search_params = dict()
+        self.flann = cv2.FlannBasedMatcher(index_params, search_params)
+
+        # pass
+
         # self.robot = av.Robot(serial=ANKI_SERIAL,
         #                   behavior_control_level=ANKI_BEHAVIOR)
         # print("robot init success")
@@ -22,7 +34,7 @@ class Detect(object):
         # self.robot.camera.init_camera_feed()
         # print("camera init success", flush=True)
 
-    # def main(self):
+    def main(self):
 
         with av.Robot(serial=ANKI_SERIAL,
                       behavior_control_level=ANKI_BEHAVIOR) as robot:
@@ -30,16 +42,6 @@ class Detect(object):
 
             robot.behavior.set_lift_height(1.0, 10.0, 10.0, 0.0, 3)
             robot.behavior.set_head_angle(degrees(5.0))
-
-            self.img = cv2.imread("block_pattern.jpg", cv2.IMREAD_GRAYSCALE)  # queryiamge
-
-            # Features
-            self.sift = cv2.xfeatures2d.SIFT_create()
-            self.kp_image, self.desc_image = self.sift.detectAndCompute(self.img, None)
-            # Feature matching
-            index_params = dict(algorithm=0, trees=5)
-            search_params = dict()
-            self.flann = cv2.FlannBasedMatcher(index_params, search_params)
 
             robot.camera.init_camera_feed()
             print("camera init success", flush=True)
@@ -61,31 +63,45 @@ class Detect(object):
                     if m.distance < 0.6 * n.distance:
                         good_points.append(m)
 
+                h, w = self.img.shape
+
                 query_pts = np.float32([self.kp_image[m.queryIdx].pt for m in good_points]).reshape(-1, 1, 2)
                 train_pts = np.float32([kp_grayframe[m.trainIdx].pt for m in good_points]).reshape(-1, 1, 2)
-                matrix, mask = cv2.findHomography(query_pts, train_pts, cv2.RANSAC, 5.0)
+                
+                try:
+                    matrix, mask = cv2.findHomography(query_pts, train_pts, cv2.RANSAC, 5.0)
+                except cv2.error:
+                    print("matrix, mask failed")
+                    continue
+                # try:
                 matches_mask = mask.ravel().tolist()
 
-                h, w = self.img.shape
                 pts = np.float32([[0, 0], [0, h], [w, h], [w, 0]]).reshape(-1, 1, 2)
-                dst = cv2.perspectiveTransform(pts, matrix)
+                try:
+                    dst = cv2.perspectiveTransform(pts, matrix)
+                except cv2.error:
+                    print("dst failed")
+                    continue
 
                 x_c = np.sum(dst[:,0][:,0]) / 4
                 x_c_offset = (frame_w / 2.0) - x_c
 
                 print("X_C")
                 print(x_c)
-                print("W")
-                print(frame_w)
+                # print("W")
+                # print(frame_w)
                 print("X_C OFFSET")
                 print(x_c_offset, flush=True)
 
-                homography = cv2.polylines(frame, [np.int32(dst)], True, (255, 0, 0), 3)
-                cv2.circle(frame, x_c, 100, 25, (0,0,255), -1)
-                cv2.imshow("Homography", homography)
+                # homography = cv2.polylines(frame, [np.int32(dst)], True, (255, 0, 0), 3)
+                # cv2.circle(frame, x_c, 100, 25, (0,0,255), -1)
+                # cv2.imshow("Homography", homography)
 
-                if(abs(x_c_offset) > 50):
-                    robot.behavior.turn_in_place(degrees(35.0 * x_c_offset / 300.0))
+                if(abs(x_c_offset) > 80):
+                    angle = 45.0 * x_c_offset / 300.0
+                    print("TURNING")
+                    print(angle)
+                    robot.behavior.turn_in_place(degrees(angle))
                     # robot.behavior.say_text("Oops!")
 
                 else:
