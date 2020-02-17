@@ -38,6 +38,6 @@ for i in range(0, NUMBER_OF_PLATES):
     blank_plate = np.array(blank_plate_pil)
 
     # Write license plate to file
-    cv2.imwrite(os.path.join(path + "pictures/", 
+    cv2.imwrite(os.path.join(path + "plates/", 
                                 "plate_{}{}.png".format(plate_alpha, plate_num)),
                 blank_plate)
