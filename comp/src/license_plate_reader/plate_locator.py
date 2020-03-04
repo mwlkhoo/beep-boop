@@ -12,8 +12,9 @@ from anki_vector.util import degrees, distance_mm, speed_mmps
 # Modify the SN to match your robot’s SN
 ANKI_SERIAL = '005040b7'
 ANKI_BEHAVIOR = av.connection.ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY
-MIN_CONFIDENCE = 0.8
-OFFSET = 20
+MIN_CONFIDENCE = 0.5
+OFFSET = 10
+ANGLE_ADJUST = 1.5
 
 class Plate_Locator(object):
     """docstring for ClassName"""
@@ -43,17 +44,20 @@ class Plate_Locator(object):
             # robot_cap = robot.camera.latest_image.raw_image
             # print("frame captured", flush=True)
 
-            frame = cv2.imread("/home/fizzer/Downloads/blue_plate.jpg")
+            frame = cv2.imread("/home/fizzer/Downloads/real_plate.jpg")
             frame_w = frame.shape[1]
             frame_h = frame.shape[0]
             dim = (frame_w, frame_h)
             # cv2.imshow("frame", robot_cap)
             # cv2.waitKey(5)
-            # frame = cv2.cvtColor(np.array(robot_cap), cv2.COLOR_BGR2RGB)
+
+            # Working with gray scale image
+            gray = cv2.cvtColor(np.array(frame), cv2.COLOR_BGR2GRAY)
+            frame = cv2.merge((gray, gray, gray))
             # # Make a copy of the frame
             orig = frame.copy()
             frame = cv2.resize(frame, self.d_dim, interpolation = cv2.INTER_AREA)
-            cv2.imshow("l", frame)
+            # cv2.imshow("l", frame)
             # frame_w = frame.shape[1]
             # print("color to gray", flush=True)
             # cv2.imshow("Raw img", frame)
@@ -63,40 +67,83 @@ class Plate_Locator(object):
 
             # construct a blob from the frame and then perform a forward pass
             # of the model to obtain the two output layer sets
-            blob = cv2.dnn.blobFromImage(frame, 1.0, self.d_dim, self.mean, swapRB = True, crop = False)
+            blob = cv2.dnn.blobFromImage(frame, 1.0, self.d_dim, self.mean, swapRB = False, crop = False)
             self.net.setInput(blob)
             (scores , geometry) = self.net.forward(self.layerNames)
             # decode the predictions, then  apply non-maxima suppression to
             # suppress weak, overlapping bounding boxes
-            (rects, confidences) = Plate_Locator.decode_predictions(scores, geometry)
+            (rects, confidences, mean_angle) = Plate_Locator.decode_predictions(scores, geometry)
+
             boxes = non_max_suppression(np.array(rects), probs=confidences)
+
+            minY = self.desired_h - 1
+            minX = self.desired_w - 1
+
+            num_boxes = boxes.shape[0]
+   
+
+            # Find the order of boxes
+            for i in range (num_boxes):
+                if minY > boxes[i][1]:
+                    minY = boxes[i][1]
+                    parking = i
+
+            for i in range (num_boxes):
+                if minX > boxes[i][0]:
+                    if (i != parking):
+                        minX = boxes[i][0]
+                        lhs = i
+
+            for i in range (num_boxes):
+                if i != parking and i != lhs:
+                    rhs = i
+
+
+            order = [parking, lhs, rhs]
             count_box = 0
-            # loop over the bounding boxes
-            for (startX, startY, endX, endY) in boxes:
+            
+
+            for i in order:
                 # scale the bounding box coordinates based on the respective
                 # ratios
-                
-                startX = int(startX * rW)
-                startY = int(startY * rH)
-                endX = int(endX * rW)
-                endY = int(endY * rH)
+            
+                startX = int(boxes[i][0] * rW)
+                startY = int(boxes[i][1] * rH)
+                endX = int(boxes[i][2] * rW)
+                endY = int(boxes[i][3] * rH)
+                dX = endX - startX
+                dY = endY - startY
+
+                if (count_box != 0):
+                    mean_angle *= ANGLE_ADJUST
+
+                sin = np.sin(mean_angle)
+                dYY = int(dY * sin)
+
+                topL = [startX, startY + dYY - OFFSET]
+                topR = [endX, startY - dYY - OFFSET]
+                bottomL = [startX, endY + dYY + OFFSET]
+                bottomR = [endX, endY - dYY + OFFSET]
+                four_points = np.array([topL, topR, bottomR, bottomL], np.int32)
+                four_points = four_points.reshape((-1,1,2))
+                trans = cv2.polylines(orig, [four_points], True, (255,0,0), 3)
+                # cv2.imshow("t", trans)
+                # cv2.waitKey(5)
                 # draw the bounding box on the frame
                 
                 if count_box == 0:
-                    plate_rhs = orig[startY:endY + OFFSET, startX:endX]  
-                    cv2.imwrite('plate_rhs.png', plate_rhs)
+                    parking_num = orig[startY:endY, startX:endX]  
+                    cv2.imwrite('parking_num.png', parking_num)
                    
-                    
-
                 elif count_box == 1:
-                    plate_num = orig[startY:endY + OFFSET, startX:endX]
-                    cv2.imwrite('plate_num.png', plate_num)
-
-                else:
-                    plate_lhs = orig[startY:endY + OFFSET, startX:endX]
+                    plate_lhs = orig[startY:endY, startX: endX]
                     cv2.imwrite('plate_lhs.png', plate_lhs)
 
-                cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
+                else:
+                    plate_rhs = orig[startY:endY, startX: endX]
+                    cv2.imwrite('plate_rhs.png', plate_rhs)
+
+                
                 count_box += 1
 
 
@@ -119,6 +166,7 @@ class Plate_Locator(object):
         (numRows, numCols) = scores.shape[2:4]
         rects = []
         confidences = []
+        angles = []
         # loop over the number of rows
         for y in range(0, numRows):
             # extract the scores (probabilities), followed by the
@@ -142,6 +190,7 @@ class Plate_Locator(object):
                 # extract the rotation angle for the prediction and
                 # then compute the sin and cosine
                 angle = anglesData[x]
+                angles.append(angle)
                 cos = np.cos(angle)
                 sin = np.sin(angle)
                 # use the geometry volume to derive the width and height
@@ -159,7 +208,8 @@ class Plate_Locator(object):
                 rects.append((startX, startY, endX, endY))
                 confidences.append(scoresData[x])
         # return a tuple of the bounding boxes and associated confidences
-        return (rects, confidences)
+
+        return (rects, confidences, np.mean(angles))
 
 if __name__ == "__main__":
     Plate_Locator().main()
