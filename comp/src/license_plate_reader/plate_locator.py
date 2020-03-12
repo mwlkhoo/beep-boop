@@ -118,22 +118,43 @@ class Plate_Locator(object):
 
                         if (count_box != 0):
                            
-                            if (startX < frame_w / 2):
+                            if (endX < frame_w / 2):
                                 mean_angle += ANGLE_ADJUST * mean_angle
                             else:
-                                 mean_angle -= ANGLE_ADJUST * mean_angle
+                                 mean_angle += 0.05
                           
 
                         sin = np.sin(mean_angle)
                         dYY = int(dY * sin)
 
-                        topL = [startX - count_box * OFFSET, startY + dYY - OFFSET]
-                        topR = [endX + count_box * (dX + OFFSET), startY - dYY - OFFSET]
-                        bottomL = [startX - count_box * OFFSET, endY + dYY + OFFSET]
-                        bottomR = [endX + count_box * (dX + OFFSET), endY - dYY + OFFSET]
-                        four_points = np.array([topL, topR, bottomR, bottomL], np.int32)
+                        # topL = [startX - count_box * OFFSET, startY + dYY - OFFSET]
+                        # topR = [endX + count_box * (dX + OFFSET), startY - dYY - OFFSET]
+                        # bottomL = [startX - count_box * OFFSET, endY + dYY + OFFSET]
+                        # bottomR = [endX + count_box * (dX + OFFSET), endY - dYY + OFFSET]
+
+                        topL = [startX, startY + dYY - OFFSET]
+                        topR = [endX + count_box * (dX), startY - dYY - OFFSET]
+                        bottomL = [startX , endY + dYY + OFFSET]
+                        bottomR = [endX + count_box * (dX ), endY - dYY + OFFSET]
+                        four_points = np.int32([topL, topR, bottomR, bottomL])
+                        # print("this is before reshape")
+                        # print(four_points)
                         four_points = four_points.reshape((-1,1,2))
                         trans = cv2.polylines(orig, [four_points], True, (255,0,0), 3)
+
+                        # try perspective transform here
+                        four_points_float_reshaped = np.float32([topL, topR, bottomR, bottomL]).reshape(-1,1,2)
+                        four_points_trans_reshaped = np.float32([[0,0],[0,(1 + count_box) * dX],[dY,(1 + count_box) * dX],[dY,0]]).reshape(-1,1,2)
+                        # print(four_points_float_reshaped.shape)
+                        # print(four_points_trans_reshaped.shape)
+                        # print("this is trans")
+                        # print(four_points_trans)
+
+                        # transform matrix
+                        M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
+                        print("this is M")
+                        print(M)
+
                         # cv2.imshow("t", trans)
                         # cv2.waitKey(5)
                         # draw the bounding box on the frame
