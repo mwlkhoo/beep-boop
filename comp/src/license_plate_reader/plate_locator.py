@@ -13,7 +13,7 @@ from anki_vector.util import degrees, distance_mm, speed_mmps
 ANKI_SERIAL = '005040b7'
 ANKI_BEHAVIOR = av.connection.ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY
 MIN_CONFIDENCE = 0.5
-OFFSET = 10
+OFFSET = 15
 ANGLE_ADJUST = 1.5
 
 class Plate_Locator(object):
@@ -76,7 +76,7 @@ class Plate_Locator(object):
                 # decode the predictions, then  apply non-maxima suppression to
                 # suppress weak, overlapping bounding boxes
                 (rects, confidences, mean_angle) = Plate_Locator.decode_predictions(scores, geometry)
-
+                # print(confidences)
                 boxes = non_max_suppression(np.array(rects), probs=confidences)
 
                 minY = self.desired_h - 1
@@ -170,17 +170,28 @@ class Plate_Locator(object):
         # confidence scores
         (numRows, numCols) = scores.shape[2:4]
         rects = []
-        confidences = []
+        # confidences = []
         angles = []
 
 
         # trying to use numpy to optimize
-        
+        scoresData_test = np.array([scores[0, 0, y] for y in range(numRows)])
+        # print("this is my test")
+        # print(scoresData_test)
+        # xData0 = np.array([geometry[0, 0, y] for y in range(numRows)])
+        # xData1 = np.array([geometry[0, 1, y] for y in range(numRows)])
+        # xData2 = np.array([geometry[0, 2, y] for y in range(numRows)])
+        # xData3 = np.array([geometry[0, 3, y] for y in range(numRows)])
+        # anglesData = np.array([geometry[0, 4, y] for y in range(numRows)])
 
+        # # trying to get all useful x's
+        useful_xs = np.where(scoresData_test > MIN_CONFIDENCE)
+        useful_xs_rows = useful_xs[0]
+        useful_xs_cols = useful_xs[1]
+        # print(scoresData_test[useful_xs_rows[0]][useful_xs_cols[0]])
+        confidences = np.array([scoresData_test[useful_xs_rows[i]][useful_xs_cols[i]] for i in range(len(useful_xs_rows))])
 
-
-
-
+        # ---------------Uncomment from here---------------
 
         # loop over the number of rows
         for y in range(numRows):
@@ -188,6 +199,8 @@ class Plate_Locator(object):
             # geometrical data used to derive potential bounding box
             # coordinates that surround text
             scoresData = scores[0, 0, y]
+            # print("this is correct")
+            # print(scoresData)
             xData0 = geometry[0, 0, y]
             xData1 = geometry[0, 1, y]
             xData2 = geometry[0, 2, y]
@@ -221,10 +234,12 @@ class Plate_Locator(object):
                 # add the bounding box coordinates and probability score
                 # to our respective lists
                 rects.append((startX, startY, endX, endY))
-                confidences.append(scoresData[x])
+                # confidences.append(scoresData[x])
+
+        
+        # ---------------Uncomment up to here---------------
 
         # return a tuple of the bounding boxes and associated confidences
-
         return (rects, confidences, np.mean(angles))
 
 if __name__ == "__main__":
