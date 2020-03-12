@@ -10,7 +10,19 @@ from PIL import Image, ImageFont, ImageDraw
 
 path = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-NUMBER_OF_PLATES = 16
+# Adjustable parameters
+NUMBER_OF_PLATES = 60
+scale = 6
+blur = 45
+
+# Write plate to image
+blank_plate = cv2.imread(path+'blank_plate.png')
+
+# Original size
+width, height, _ = blank_plate.shape
+
+# Desired "pixelated" size
+w, h = (int(width / scale), int(height / scale))
 
 for i in range(0, NUMBER_OF_PLATES):
 
@@ -37,7 +49,20 @@ for i in range(0, NUMBER_OF_PLATES):
     # Convert back to OpenCV image and save
     blank_plate = np.array(blank_plate_pil)
 
+    # Resize input to "pixelated" size
+    temp = cv2.resize(blank_plate, (h, w), interpolation=cv2.INTER_LINEAR)
+
+    # Initialize output image
+    resized_plate = cv2.resize(temp, (height, width), interpolation=cv2.INTER_NEAREST)
+
+    blur_plate_pil = cv2.GaussianBlur(resized_plate,(blur,blur),cv2.BORDER_DEFAULT)
+    blur_plate = np.array(blur_plate_pil)
+
     # Write license plate to file
-    cv2.imwrite(os.path.join(path + "plates/", 
-                                "plate_{}{}.png".format(plate_alpha, plate_num)),
-                blank_plate)
+    # cv2.imwrite(os.path.join(path + "plates/", 
+    #                             "plate_{}{}.png".format(plate_alpha, plate_num)),
+    #             blank_plate)
+    cv2.imwrite(os.path.join(path + "blurred_plates/", 
+                                    "plate_{}{}.png".format(plate_alpha, plate_num)),
+                    blur_plate)
+
