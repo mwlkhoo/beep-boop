@@ -14,7 +14,7 @@ ANKI_SERIAL = '005040b7'
 ANKI_BEHAVIOR = av.connection.ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY
 MIN_CONFIDENCE = 0.5
 OFFSET = 15
-ANGLE_ADJUST = 1.5
+ANGLE_ADJUST = -2.5
 
 class Plate_Locator(object):
     """docstring for ClassName"""
@@ -124,10 +124,10 @@ class Plate_Locator(object):
                         sin = np.sin(mean_angle)
                         dYY = int(dY * sin)
 
-                        topL = [startX, startY + dYY - OFFSET]
-                        topR = [endX + count_box * dX + OFFSET, startY - dYY - OFFSET]
-                        bottomL = [startX, endY + dYY + OFFSET]
-                        bottomR = [endX + count_box * dX + OFFSET, endY - dYY + OFFSET]
+                        topL = [startX - count_box * OFFSET, startY + dYY - OFFSET]
+                        topR = [endX + count_box * (dX + OFFSET), startY - dYY - OFFSET]
+                        bottomL = [startX - count_box * OFFSET, endY + dYY + OFFSET]
+                        bottomR = [endX + count_box * (dX + OFFSET), endY - dYY + OFFSET]
                         four_points = np.array([topL, topR, bottomR, bottomL], np.int32)
                         four_points = four_points.reshape((-1,1,2))
                         trans = cv2.polylines(orig, [four_points], True, (255,0,0), 3)
@@ -169,77 +169,45 @@ class Plate_Locator(object):
         # initialize our set of bounding box rectangles and corresponding
         # confidence scores
         (numRows, numCols) = scores.shape[2:4]
-        rects = []
-        # confidences = []
-        angles = []
-
 
         # trying to use numpy to optimize
-        scoresData_test = np.array([scores[0, 0, y] for y in range(numRows)])
-        # print("this is my test")
-        # print(scoresData_test)
-        # xData0 = np.array([geometry[0, 0, y] for y in range(numRows)])
-        # xData1 = np.array([geometry[0, 1, y] for y in range(numRows)])
-        # xData2 = np.array([geometry[0, 2, y] for y in range(numRows)])
-        # xData3 = np.array([geometry[0, 3, y] for y in range(numRows)])
-        # anglesData = np.array([geometry[0, 4, y] for y in range(numRows)])
+        scoresData = np.array([scores[0, 0, y] for y in range(numRows)])
+        xData0 = np.array([geometry[0, 0, y] for y in range(numRows)])
+        xData1 = np.array([geometry[0, 1, y] for y in range(numRows)])
+        xData2 = np.array([geometry[0, 2, y] for y in range(numRows)])
+        xData3 = np.array([geometry[0, 3, y] for y in range(numRows)])
+        anglesData = np.array([geometry[0, 4, y] for y in range(numRows)])
 
         # # trying to get all useful x's
-        useful_xs = np.where(scoresData_test > MIN_CONFIDENCE)
+        useful_xs = np.where(scoresData > MIN_CONFIDENCE)
         useful_xs_rows = useful_xs[0]
         useful_xs_cols = useful_xs[1]
-        # print(scoresData_test[useful_xs_rows[0]][useful_xs_cols[0]])
-        confidences = np.array([scoresData_test[useful_xs_rows[i]][useful_xs_cols[i]] for i in range(len(useful_xs_rows))])
 
-        # ---------------Uncomment from here---------------
+        length = len(useful_xs_rows)
 
-        # loop over the number of rows
-        for y in range(numRows):
-            # extract the scores (probabilities), followed by the
-            # geometrical data used to derive potential bounding box
-            # coordinates that surround text
-            scoresData = scores[0, 0, y]
-            # print("this is correct")
-            # print(scoresData)
-            xData0 = geometry[0, 0, y]
-            xData1 = geometry[0, 1, y]
-            xData2 = geometry[0, 2, y]
-            xData3 = geometry[0, 3, y]
-            anglesData = geometry[0, 4, y]
-            # loop over the number of columns
-            for x in range(numCols):
-                # if our score does not have sufficient probability,
-                # ignore it
-                if scoresData[x] < MIN_CONFIDENCE:
-                    continue
-                # compute the offset factor as our resulting feature
-                # maps will be 4x smaller than the input image
-                (offsetX, offsetY) = (x * 4.0, y * 4.0)
-                # extract the rotation angle for the prediction and
-                # then compute the sin and cosine
-                angle = anglesData[x]
-                angles.append(angle)
-                cos = np.cos(angle)
-                sin = np.sin(angle)
-                # use the geometry volume to derive the width and height
-                # of the bounding box
-                h = xData0[x] + xData2[x]
-                w = xData1[x] + xData3[x]
-                # compute both the starting and ending (x, y)-coordinates
-                # for the text prediction bounding box
-                endX = int(offsetX + (cos * xData1[x]) + (sin * xData2[x]))
-                endY = int(offsetY - (sin * xData1[x]) + (cos * xData2[x]))
-                startX = int(endX - w)
-                startY = int(endY - h)
-                # add the bounding box coordinates and probability score
-                # to our respective lists
-                rects.append((startX, startY, endX, endY))
-                # confidences.append(scoresData[x])
+        offsetX = useful_xs_cols * 4.0
+        offsetY = useful_xs_rows * 4.0
 
-        
-        # ---------------Uncomment up to here---------------
+        angles = np.array([anglesData[useful_xs_rows[i]][useful_xs_cols[i]] for i in range(length)])
+        cos = np.cos(angles)
+        sin = np.sin(angles)
 
-        # return a tuple of the bounding boxes and associated confidences
+        h = np.array([xData0[useful_xs_rows[i]][useful_xs_cols[i]] + xData2[useful_xs_rows[i]][useful_xs_cols[i]] 
+            for i in range(length)])
+        w = np.array([xData1[useful_xs_rows[i]][useful_xs_cols[i]] + xData3[useful_xs_rows[i]][useful_xs_cols[i]] 
+            for i in range(length)])
+
+        endX = np.array([int(offsetX[i] + (cos[i] * xData1[useful_xs_rows[i]][useful_xs_cols[i]]) + (sin[i] * xData2[useful_xs_rows[i]][useful_xs_cols[i]])) 
+            for i in range(length)])
+        endY = np.array([int(offsetY[i] - (sin[i] * xData1[useful_xs_rows[i]][useful_xs_cols[i]]) + (cos[i] * xData2[useful_xs_rows[i]][useful_xs_cols[i]])) 
+            for i in range(length)])
+        startX = np.array([int(endX[i] - w[i]) for i in range(length)])
+        startY = np.array([int(endY[i] - h[i]) for i in range(length)])
+
+        rects = np.array([(startX[i], startY[i], endX[i], endY[i]) for i in range(length)])
+
+        confidences = np.array([scoresData[useful_xs_rows[i]][useful_xs_cols[i]] for i in range(length)])
+      
         return (rects, confidences, np.mean(angles))
 
 if __name__ == "__main__":
