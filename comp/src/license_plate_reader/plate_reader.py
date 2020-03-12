@@ -53,7 +53,7 @@ class Plate_Reader(object):
             y_predict = self.loaded_model.predict(nor_img_aug)[0]
             print(y_predict)
             pred_index = np.argmax(y_predict)
-            print(pred_index)
+            # print(pred_index)
             print(CHAR[pred_index])
 
 if __name__ == "__main__":
