@@ -117,7 +117,12 @@ class Plate_Locator(object):
                         dY = endY - startY
 
                         if (count_box != 0):
-                            mean_angle *= ANGLE_ADJUST
+                           
+                            if (startX < frame_w / 2):
+                                mean_angle += ANGLE_ADJUST * mean_angle
+                            else:
+                                 mean_angle -= ANGLE_ADJUST * mean_angle
+                          
 
                         sin = np.sin(mean_angle)
                         dYY = int(dY * sin)
