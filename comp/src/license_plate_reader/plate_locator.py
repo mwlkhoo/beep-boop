@@ -1,20 +1,18 @@
 # import the necessary packages
 from imutils.object_detection import non_max_suppression
 import numpy as np
-import argparse
 import imutils
-import time
 import cv2
 
 import anki_vector as av
-from anki_vector.util import degrees, distance_mm, speed_mmps
+from anki_vector.util import degrees
 
 # Modify the SN to match your robot’s SN
 ANKI_SERIAL = '005040b7'
 ANKI_BEHAVIOR = av.connection.ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY
 MIN_CONFIDENCE = 0.5
 OFFSET = 15
-ANGLE_ADJUST = -2.5
+ANGLE_ADJUST = -3.0
 
 class Plate_Locator(object):
     """docstring for ClassName"""
