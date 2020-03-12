@@ -30,132 +30,137 @@ class Plate_Locator(object):
         self.layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
        
     def main(self):
-        # with av.Robot(serial=ANKI_SERIAL, behavior_control_level=ANKI_BEHAVIOR) as robot:
+        with av.Robot(serial=ANKI_SERIAL, behavior_control_level=ANKI_BEHAVIOR) as robot:
 
-        #     print("running loop", flush=True)
+            print("running loop", flush=True)
 
-        #     robot.behavior.set_lift_height(1.0, 10.0, 10.0, 0.0, 3)
-        #     robot.behavior.set_head_angle(degrees(5.0))
+            robot.behavior.set_lift_height(1.0, 10.0, 10.0, 0.0, 3)
+            robot.behavior.set_head_angle(degrees(5.0))
 
-        #     robot.camera.init_camera_feed()
-        #     print("camera init success", flush=True)
+            robot.camera.init_camera_feed()
+            print("camera init success", flush=True)
 
-        while(True):
-            # robot_cap = robot.camera.latest_image.raw_image
-            # print("frame captured", flush=True)
+            while(True):
+                # robot_cap = robot.camera.latest_image.raw_image
+                # print("frame captured", flush=True)
 
-            frame = cv2.imread("/home/fizzer/Downloads/real_plate.jpg")
-            frame_w = frame.shape[1]
-            frame_h = frame.shape[0]
-            dim = (frame_w, frame_h)
-            # cv2.imshow("frame", robot_cap)
-            # cv2.waitKey(5)
+                robot_cap = robot.camera.latest_image.raw_image
+                print("frame captured", flush=True)
 
-            # Working with gray scale image
-            gray = cv2.cvtColor(np.array(frame), cv2.COLOR_BGR2GRAY)
-            frame = cv2.merge((gray, gray, gray))
-            # # Make a copy of the frame
-            orig = frame.copy()
-            frame = cv2.resize(frame, self.d_dim, interpolation = cv2.INTER_AREA)
-            # cv2.imshow("l", frame)
-            # frame_w = frame.shape[1]
-            # print("color to gray", flush=True)
-            # cv2.imshow("Raw img", frame)
-            # cv2.waitKey(5)
-            rW = float(frame_w) / float(self.desired_w)
-            rH = float(frame_h) / float(self.desired_h)
-
-            # construct a blob from the frame and then perform a forward pass
-            # of the model to obtain the two output layer sets
-            blob = cv2.dnn.blobFromImage(frame, 1.0, self.d_dim, self.mean, swapRB = False, crop = False)
-            self.net.setInput(blob)
-            (scores , geometry) = self.net.forward(self.layerNames)
-            # decode the predictions, then  apply non-maxima suppression to
-            # suppress weak, overlapping bounding boxes
-            (rects, confidences, mean_angle) = Plate_Locator.decode_predictions(scores, geometry)
-
-            boxes = non_max_suppression(np.array(rects), probs=confidences)
-
-            minY = self.desired_h - 1
-            minX = self.desired_w - 1
-
-            num_boxes = boxes.shape[0]
-   
-
-            # Find the order of boxes
-            for i in range (num_boxes):
-                if minY > boxes[i][1]:
-                    minY = boxes[i][1]
-                    parking = i
-
-            for i in range (num_boxes):
-                if minX > boxes[i][0]:
-                    if (i != parking):
-                        minX = boxes[i][0]
-                        lhs = i
-
-            for i in range (num_boxes):
-                if i != parking and i != lhs:
-                    rhs = i
-
-
-            order = [parking, lhs, rhs]
-            count_box = 0
-            
-
-            for i in order:
-                # scale the bounding box coordinates based on the respective
-                # ratios
-            
-                startX = int(boxes[i][0] * rW)
-                startY = int(boxes[i][1] * rH)
-                endX = int(boxes[i][2] * rW)
-                endY = int(boxes[i][3] * rH)
-                dX = endX - startX
-                dY = endY - startY
-
-                if (count_box != 0):
-                    mean_angle *= ANGLE_ADJUST
-
-                sin = np.sin(mean_angle)
-                dYY = int(dY * sin)
-
-                topL = [startX, startY + dYY - OFFSET]
-                topR = [endX, startY - dYY - OFFSET]
-                bottomL = [startX, endY + dYY + OFFSET]
-                bottomR = [endX, endY - dYY + OFFSET]
-                four_points = np.array([topL, topR, bottomR, bottomL], np.int32)
-                four_points = four_points.reshape((-1,1,2))
-                trans = cv2.polylines(orig, [four_points], True, (255,0,0), 3)
-                # cv2.imshow("t", trans)
+                gray = cv2.cvtColor(np.array(robot_cap), cv2.COLOR_BGR2GRAY)
+                frame_w = gray.shape[1]
+                frame_h = gray.shape[0]
+                dim = (frame_w, frame_h)
+                # cv2.imshow("frame", robot_cap)
                 # cv2.waitKey(5)
-                # draw the bounding box on the frame
-                
-                if count_box == 0:
-                    parking_num = orig[startY:endY, startX:endX]  
-                    cv2.imwrite('parking_num.png', parking_num)
-                   
-                elif count_box == 1:
-                    plate_lhs = orig[startY:endY, startX: endX]
-                    cv2.imwrite('plate_lhs.png', plate_lhs)
 
-                else:
-                    plate_rhs = orig[startY:endY, startX: endX]
-                    cv2.imwrite('plate_rhs.png', plate_rhs)
+                # Working with gray scale image
+                # gray = cv2.cvtColor(np.array(frame), cv2.COLOR_BGR2GRAY)
+                frame = cv2.merge((gray, gray, gray))
+                # # Make a copy of the frame
+                orig = frame.copy()
+                frame = cv2.resize(frame, self.d_dim, interpolation = cv2.INTER_AREA)
+                # cv2.imshow("l", frame)
+                # frame_w = frame.shape[1]
+                # print("color to gray", flush=True)
+                # cv2.imshow("Raw img", frame)
+                # cv2.waitKey(5)
+                rW = float(frame_w) / float(self.desired_w)
+                rH = float(frame_h) / float(self.desired_h)
 
-                
-                count_box += 1
+                # construct a blob from the frame and then perform a forward pass
+                # of the model to obtain the two output layer sets
+                blob = cv2.dnn.blobFromImage(frame, 1.0, self.d_dim, self.mean, swapRB = False, crop = False)
+                self.net.setInput(blob)
+                (scores , geometry) = self.net.forward(self.layerNames)
+                # decode the predictions, then  apply non-maxima suppression to
+                # suppress weak, overlapping bounding boxes
+                (rects, confidences, mean_angle) = Plate_Locator.decode_predictions(scores, geometry)
+
+                boxes = non_max_suppression(np.array(rects), probs=confidences)
+
+                minY = self.desired_h - 1
+                minX = self.desired_w - 1
+
+                try:
+                    num_boxes = boxes.shape[0]
+                    # print(num_boxes)
+                          # # Find the order of boxes
+                    for i in range (num_boxes):
+                        if minY > boxes[i][1]:
+                            minY = boxes[i][1]
+                            parking = i
+
+                    for i in range (num_boxes):
+                        if minX > boxes[i][0]:
+                            if (i != parking):
+                                minX = boxes[i][0]
+                                lhs = i
+
+                    # for i in range (num_boxes):
+                    #     if i != parking and i != lhs:
+                    #         rhs = i
+
+                  
+                    order = [parking, lhs]
+                    # print(order)
+                    count_box = 0
+                    
+
+                    for i in order:
+                        # scale the bounding box coordinates based on the respective
+                        # ratios
+                    
+                        startX = int(boxes[i][0] * rW)
+                        startY = int(boxes[i][1] * rH)
+                        endX = int(boxes[i][2] * rW)
+                        endY = int(boxes[i][3] * rH)
+                        dX = endX - startX
+                        dY = endY - startY
+
+                        if (count_box != 0):
+                            mean_angle *= ANGLE_ADJUST
+
+                        sin = np.sin(mean_angle)
+                        dYY = int(dY * sin)
+
+                        topL = [startX, startY + dYY - OFFSET]
+                        topR = [endX + count_box * dX + OFFSET, startY - dYY - OFFSET]
+                        bottomL = [startX, endY + dYY + OFFSET]
+                        bottomR = [endX + count_box * dX + OFFSET, endY - dYY + OFFSET]
+                        four_points = np.array([topL, topR, bottomR, bottomL], np.int32)
+                        four_points = four_points.reshape((-1,1,2))
+                        trans = cv2.polylines(orig, [four_points], True, (255,0,0), 3)
+                        # cv2.imshow("t", trans)
+                        # cv2.waitKey(5)
+                        # draw the bounding box on the frame
+                        
+                        # if count_box == 0:
+                        #     parking_num = orig[startY:endY, startX:endX]  
+                        #     # cv2.imwrite('parking_num.png', parking_num)
+                           
+                        # elif count_box == 1:
+                        #     plate_lhs = orig[startY:endY, startX: endX]
+                        #     # cv2.imwrite('plate_lhs.png', plate_lhs)
+
+                        # else:
+                        #     plate_rhs = orig[startY:endY, startX: endX]
+                        #     # cv2.imwrite('plate_rhs.png', plate_rhs)
+
+                        
+                        count_box += 1
 
 
 
-            # show the output frame
-            cv2.imshow("Text Detection", orig)
-            key = cv2.waitKey(1) & 0xFF
-            # if the `q` key was pressed, break from the loop
-            if key == ord("q"):
-                break
-  			
-			
+                    # show the output frame
+                    cv2.imshow("Text Detection", trans)
+                    key = cv2.waitKey(1) & 0xFF
+                    # if the `q` key was pressed, break from the loop
+                    if key == ord("q"):
+                        break
+
+                except (UnboundLocalError, IndexError, AttributeError):
+                    continue
 
 
 
@@ -167,8 +172,18 @@ class Plate_Locator(object):
         rects = []
         confidences = []
         angles = []
+
+
+        # trying to use numpy to optimize
+        
+
+
+
+
+
+
         # loop over the number of rows
-        for y in range(0, numRows):
+        for y in range(numRows):
             # extract the scores (probabilities), followed by the
             # geometrical data used to derive potential bounding box
             # coordinates that surround text
@@ -179,7 +194,7 @@ class Plate_Locator(object):
             xData3 = geometry[0, 3, y]
             anglesData = geometry[0, 4, y]
             # loop over the number of columns
-            for x in range(0, numCols):
+            for x in range(numCols):
                 # if our score does not have sufficient probability,
                 # ignore it
                 if scoresData[x] < MIN_CONFIDENCE:
@@ -207,6 +222,7 @@ class Plate_Locator(object):
                 # to our respective lists
                 rects.append((startX, startY, endX, endY))
                 confidences.append(scoresData[x])
+
         # return a tuple of the bounding boxes and associated confidences
 
         return (rects, confidences, np.mean(angles))
