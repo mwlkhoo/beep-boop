@@ -26,7 +26,7 @@ class Plate_Reader(object):
     def __init__(self):
 
          # load the trained model
-        json_file = open('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/license_plate_model (1).json', 'r')
+        json_file = open('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/license_plate_model.json', 'r')
         loaded_model_json = json_file.read()
         json_file.close()
         self.loaded_model = model_from_json(loaded_model_json)
@@ -38,14 +38,34 @@ class Plate_Reader(object):
     def main(self):
         # change to anki's camera later
         while(True):
-            # img = np.array(Image.open(f'/home/fizzer/Downloads/A.png'))
-            # print(img.shape)
-            parking_num = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/parking_num.png')
-            plate_num = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/plate_num.png')
-            # find a way to deblur the image!
+            
+            # img = cv2.imread('/home/fizzer/Downloads/P.png')
+
+            # getting the saved image (saved in plate_locator.py)
+            parking_num = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/parking.png')
+            plate_num = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/plate.png')
+            
+            # slice it
+            # get the shape of each array
+            (park_h, park_w) = parking_num.shape[0], parking_num.shape[1]
+            (plate_h, plate_w) = plate_num.shape[0], plate_num.shape[1]
+
+            park_first_num = parking_num[int(park_h / 6):,int(park_w * 1.1 / 3):int(park_w * 2.1 / 3)]
+            park_second_num = parking_num[int(park_h / 6):,int(park_w * 2 / 3):]
+
+            # resize the array
+            resized_park_first_num = cv2.resize(park_first_num, dsize=(100, 298), interpolation=cv2.INTER_CUBIC)
+            resized_park_second_num = cv2.resize(park_second_num, dsize=(100, 298), interpolation=cv2.INTER_CUBIC)
+            (thresh, blackAndWhiteImage) = cv2.threshold(resized_park_second_num, 100, 255, cv2.THRESH_BINARY)
+            blackAndWhiteImage = cv2.cvtColor(blackAndWhiteImage, cv2.COLOR_BGR2RGB)
+            cv2.imshow("first_num", blackAndWhiteImage)
+            cv2.waitKey(5)
+            
             
             # Normalize it
-            normalized_img = img[:,:,0:3] / 255.0
+            normalized_img = blackAndWhiteImage[:,:,0:3] / 255.0
+            cv2.imshow("nor", normalized_img)
+            cv2.waitKey(5)
             # print(normalized_img.shape)
             nor_img_aug = np.expand_dims(normalized_img, axis=0)
             # self.loaded_model.compile(loss='categorical_crossentropy', optimizer=optimizers.RMSprop(lr=LEARNING_RATE),
@@ -56,7 +76,7 @@ class Plate_Reader(object):
             # print(pred_index)
             print(CHAR[pred_index])
 
-            return (read_parking, read_plate)
+            # return (read_parking, read_plate)
 
 if __name__ == "__main__":
     Plate_Reader().main()

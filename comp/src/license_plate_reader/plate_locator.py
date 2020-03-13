@@ -26,8 +26,7 @@ class Plate_Locator(object):
         self.mean = (123.68, 116.78, 103.94)
         self.net = cv2.dnn.readNet("/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/frozen_east_text_detection.pb")
         self.layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
-       
-        self.savedImage = False
+    
 
     def main(self):
         with av.Robot(serial=ANKI_SERIAL, behavior_control_level=ANKI_BEHAVIOR) as robot:
@@ -40,9 +39,11 @@ class Plate_Locator(object):
             robot.camera.init_camera_feed()
             print("camera init success", flush=True)
 
+            savedImage = False
+            count_loop_save = 0
+            count_loop = 0
+
             while(True):
-                # robot_cap = robot.camera.latest_image.raw_image
-                # print("frame captured", flush=True)
 
                 robot_cap = robot.camera.latest_image.raw_image
                 print("frame captured", flush=True)
@@ -51,8 +52,6 @@ class Plate_Locator(object):
                 frame_w = gray.shape[1]
                 frame_h = gray.shape[0]
                 dim = (frame_w, frame_h)
-                # cv2.imshow("frame", robot_cap)
-                # cv2.waitKey(5)
 
                 # Working with gray scale image
                 # gray = cv2.cvtColor(np.array(frame), cv2.COLOR_BGR2GRAY)
@@ -62,11 +61,7 @@ class Plate_Locator(object):
                 orig1 = frame.copy()
 
                 frame = cv2.resize(frame, self.d_dim, interpolation = cv2.INTER_AREA)
-                # cv2.imshow("l", frame)
-                # frame_w = frame.shape[1]
-                # print("color to gray", flush=True)
-                # cv2.imshow("Raw img", frame)
-                # cv2.waitKey(5)
+       
                 rW = float(frame_w) / float(self.desired_w)
                 rH = float(frame_h) / float(self.desired_h)
 
@@ -85,6 +80,7 @@ class Plate_Locator(object):
                 minX = self.desired_w - 1
 
                 try:
+
                     num_boxes = boxes.shape[0]
                     # print(num_boxes)
                           # # Find the order of boxes
@@ -146,43 +142,58 @@ class Plate_Locator(object):
                         four_points = four_points.reshape((-1,1,2))
                         trans = cv2.polylines(orig, [four_points], True, (255,0,0), 3)
 
-                        # # try perspective transform here
-                        # four_points_float_reshaped = np.float32([topL, topR, bottomR, bottomL]).reshape(-1,1,2)
+                        # try perspective transform here
+                        four_points_float_reshaped = np.float32([topL, topR, bottomR, bottomL]).reshape(-1,1,2)
+                        if count_box > 0:
+                            test = orig1[startY:endY,startX:endX + dX]
+                            cv2.imshow("test",test)
+                            cv2.waitKey(5)
                         # four_points_trans_reshaped = np.float32([[startX,startY - OFFSET],[endX + count_box * (dX + OFFSET), startY - OFFSET],[startX, endY + OFFSET],[endX + count_box * (dX + OFFSET),endY + OFFSET]]).reshape(-1,1,2)
-                        # # print(four_points_float_reshaped.shape)
-                        # # print(four_points_trans_reshaped.shape)
-                        # # print("this is trans")
-                        # # print(four_points_trans)
+                        four_points_trans_reshaped = np.float32([[0,0],[dX + count_box * dX-1,0],[dX + count_box * dX-1,dY-1],[0,dY-1]]).reshape(-1,1,2)
+                        # print(four_points_float_reshaped)
+                        # print(four_points_trans_reshaped)
+                        # print("this is dX * 5")
+                        # print(dX*2)
+                        # print("this is dY * 5")
+                        # print(dY)
+                        # print(four_points_float_reshaped.shape)
+                        # print(four_points_trans_reshaped.shape)
+                        # print("this is trans")
+                        # print(four_points_trans)
 
-                        # # transform matrix
-                        # M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
-                        # dst = cv2.warpPerspective(frame, M, (298,100))
-                        # if count_box > 0:
-                        #     print("this is for plate")
-                        #     cv2.imshow("frame", frame)
-                        #     cv2.imshow("check", trans)
-                        #     cv2.waitKey(5)
-
-                        # cv2.imshow("t", trans)
-                        # cv2.waitKey(5)
-                        # draw the bounding box on the frame
-                        
+                        # transform matrix
+                        # desired shape: 600x298
+                        M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
+                        dst = cv2.warpPerspective(orig1, M, (dX + count_box * dX,dY))
+                        # print(dst)
                         if count_box == 0:
-                            parking_num = orig1[startY-OFFSET : endY+OFFSET, startX:endX]
-                            if not self.savedImage:  
-                                cv2.imwrite('parking_num.png', parking_num)
-                           
+                            print("this is for plate")
+                            # cv2.imshow("frame1", dst)
+                            # # cv2.imshow("check", trans)
+                            # cv2.waitKey(5)
+                            if (count_loop_save > 5 and not savedImage):  
+                                cv2.imwrite('parking.png', dst)
                         else:
-                            plate = orig1[startY-OFFSET : endY+OFFSET, startX: endX + dX + OFFSET]
-                            if not self.savedImage:
-                                cv2.imwrite('plate.png', plate)
-                                self.savedImage = True
+                            print("this is for plate")
+                            # cv2.imshow("frame2", dst)
+                            # # cv2.imshow("check", trans)
+                            # cv2.waitKey(5)
+                            if (count_loop_save > 5 and not savedImage):
+                                cv2.imwrite('plate.png', dst)
+                                count_loop_save = 0
+                                savedImage = True
 
+                        # if count_box == 0:
+                        #     parking_num = orig1[startY-OFFSET : endY+OFFSET, startX:endX]
+                        #     if not self.savedImage:  
+                        #         cv2.imwrite('parking.png', parking_num)
+                           
                         # else:
-                        #     plate_rhs = orig[startY:endY, startX: endX]
-                        #     # cv2.imwrite('plate_rhs.png', plate_rhs)
+                        #     plate = orig1[startY-OFFSET : endY+OFFSET, startX: endX + dX + OFFSET]
+                        #     if not self.savedImage:
+                        #         cv2.imwrite('plate.png', plate)
+                        #         self.savedImage = True
 
-                        
                         count_box += 1
 
 
@@ -194,8 +205,19 @@ class Plate_Locator(object):
                     if key == ord("q"):
                         break
 
+                    # wait until stable then save
+                    if not savedImage:
+                        count_loop_save += 1
+
+                    if savedImage:
+                        count_loop += 1
+
+                    if count_loop > 50:
+                        savedImage = False
+                        count_loop = 0
+                        
                     # call the plate_reader.py
-                    (read_parking, read_plate) = Plate_Reader.main(self)
+                    # (read_parking, read_plate) = Plate_Reader.main(self)
 
                 except (UnboundLocalError, IndexError, AttributeError):
                     continue
