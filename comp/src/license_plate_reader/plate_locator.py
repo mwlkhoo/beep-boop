@@ -11,7 +11,7 @@ from anki_vector.util import degrees
 ANKI_SERIAL = '005040b7'
 ANKI_BEHAVIOR = av.connection.ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY
 MIN_CONFIDENCE = 0.5
-OFFSET = 15
+OFFSET = 8
 ANGLE_ADJUST = -3.0
 
 class Plate_Locator(object):
@@ -27,6 +27,8 @@ class Plate_Locator(object):
         self.net = cv2.dnn.readNet("/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/frozen_east_text_detection.pb")
         self.layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
        
+        self.savedImage = False
+
     def main(self):
         with av.Robot(serial=ANKI_SERIAL, behavior_control_level=ANKI_BEHAVIOR) as robot:
 
@@ -57,6 +59,8 @@ class Plate_Locator(object):
                 frame = cv2.merge((gray, gray, gray))
                 # # Make a copy of the frame
                 orig = frame.copy()
+                orig1 = frame.copy()
+
                 frame = cv2.resize(frame, self.d_dim, interpolation = cv2.INTER_AREA)
                 # cv2.imshow("l", frame)
                 # frame_w = frame.shape[1]
@@ -121,7 +125,7 @@ class Plate_Locator(object):
                             if (endX < frame_w / 2):
                                 mean_angle += ANGLE_ADJUST * mean_angle
                             else:
-                                 mean_angle += 0.05
+                                 mean_angle += 0.15
                           
 
                         sin = np.sin(mean_angle)
@@ -133,39 +137,46 @@ class Plate_Locator(object):
                         # bottomR = [endX + count_box * (dX + OFFSET), endY - dYY + OFFSET]
 
                         topL = [startX, startY + dYY - OFFSET]
-                        topR = [endX + count_box * (dX), startY - dYY - OFFSET]
+                        topR = [endX + count_box * (dX + OFFSET), startY - dYY - OFFSET]
                         bottomL = [startX , endY + dYY + OFFSET]
-                        bottomR = [endX + count_box * (dX ), endY - dYY + OFFSET]
+                        bottomR = [endX + count_box * (dX + OFFSET), endY - dYY + OFFSET]
                         four_points = np.int32([topL, topR, bottomR, bottomL])
                         # print("this is before reshape")
                         # print(four_points)
                         four_points = four_points.reshape((-1,1,2))
                         trans = cv2.polylines(orig, [four_points], True, (255,0,0), 3)
 
-                        # try perspective transform here
-                        four_points_float_reshaped = np.float32([topL, topR, bottomR, bottomL]).reshape(-1,1,2)
-                        four_points_trans_reshaped = np.float32([[0,0],[0,(1 + count_box) * dX],[dY,(1 + count_box) * dX],[dY,0]]).reshape(-1,1,2)
-                        # print(four_points_float_reshaped.shape)
-                        # print(four_points_trans_reshaped.shape)
-                        # print("this is trans")
-                        # print(four_points_trans)
+                        # # try perspective transform here
+                        # four_points_float_reshaped = np.float32([topL, topR, bottomR, bottomL]).reshape(-1,1,2)
+                        # four_points_trans_reshaped = np.float32([[startX,startY - OFFSET],[endX + count_box * (dX + OFFSET), startY - OFFSET],[startX, endY + OFFSET],[endX + count_box * (dX + OFFSET),endY + OFFSET]]).reshape(-1,1,2)
+                        # # print(four_points_float_reshaped.shape)
+                        # # print(four_points_trans_reshaped.shape)
+                        # # print("this is trans")
+                        # # print(four_points_trans)
 
-                        # transform matrix
-                        M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
-                        print("this is M")
-                        print(M)
+                        # # transform matrix
+                        # M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
+                        # dst = cv2.warpPerspective(frame, M, (298,100))
+                        # if count_box > 0:
+                        #     print("this is for plate")
+                        #     cv2.imshow("frame", frame)
+                        #     cv2.imshow("check", trans)
+                        #     cv2.waitKey(5)
 
                         # cv2.imshow("t", trans)
                         # cv2.waitKey(5)
                         # draw the bounding box on the frame
                         
-                        # if count_box == 0:
-                        #     parking_num = orig[startY:endY, startX:endX]  
-                        #     # cv2.imwrite('parking_num.png', parking_num)
+                        if count_box == 0:
+                            parking_num = orig1[startY-OFFSET : endY+OFFSET, startX:endX]
+                            if not self.savedImage:  
+                                cv2.imwrite('parking_num.png', parking_num)
                            
-                        # elif count_box == 1:
-                        #     plate_lhs = orig[startY:endY, startX: endX]
-                        #     # cv2.imwrite('plate_lhs.png', plate_lhs)
+                        else:
+                            plate = orig1[startY-OFFSET : endY+OFFSET, startX: endX + dX + OFFSET]
+                            if not self.savedImage:
+                                cv2.imwrite('plate.png', plate)
+                                self.savedImage = True
 
                         # else:
                         #     plate_rhs = orig[startY:endY, startX: endX]
@@ -182,6 +193,9 @@ class Plate_Locator(object):
                     # if the `q` key was pressed, break from the loop
                     if key == ord("q"):
                         break
+
+                    # call the plate_reader.py
+                    (read_parking, read_plate) = Plate_Reader.main(self)
 
                 except (UnboundLocalError, IndexError, AttributeError):
                     continue
