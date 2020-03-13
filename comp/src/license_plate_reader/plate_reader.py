@@ -26,7 +26,7 @@ class Plate_Reader(object):
     def __init__(self):
 
          # load the trained model
-        json_file = open('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/license_plate_model.json', 'r')
+        json_file = open('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/license_plate_model (1).json', 'r')
         loaded_model_json = json_file.read()
         json_file.close()
         self.loaded_model = model_from_json(loaded_model_json)
@@ -40,8 +40,8 @@ class Plate_Reader(object):
         while(True):
             # img = np.array(Image.open(f'/home/fizzer/Downloads/A.png'))
             # print(img.shape)
-            img = cv2.imread('/home/fizzer/Downloads/9.png')
-            
+            parking_num = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/parking_num.png')
+            plate_num = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/plate_num.png')
             # find a way to deblur the image!
             
             # Normalize it
@@ -55,6 +55,8 @@ class Plate_Reader(object):
             pred_index = np.argmax(y_predict)
             # print(pred_index)
             print(CHAR[pred_index])
+
+            return (read_parking, read_plate)
 
 if __name__ == "__main__":
     Plate_Reader().main()

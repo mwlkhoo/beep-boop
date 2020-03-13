@@ -194,6 +194,9 @@ class Plate_Locator(object):
                     if key == ord("q"):
                         break
 
+                    # call the plate_reader.py
+                    (read_parking, read_plate) = Plate_Reader.main(self)
+
                 except (UnboundLocalError, IndexError, AttributeError):
                     continue
 
