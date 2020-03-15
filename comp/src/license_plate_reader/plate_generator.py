@@ -13,7 +13,7 @@ path = os.path.dirname(os.path.realpath(__file__)) + "/"
 # Adjustable parameters
 NUMBER_OF_PLATES = 60
 scale = 6
-blur = 45
+blur = 15
 
 # Write plate to image
 blank_plate = cv2.imread(path+'blank_plate.png')
@@ -44,7 +44,7 @@ for i in range(0, NUMBER_OF_PLATES):
     # Get a drawing context
     draw = ImageDraw.Draw(blank_plate_pil)
     monospace = ImageFont.truetype("/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf", 200)
-    draw.text((48, 50),plate_alpha + " " + plate_num, (0,0,0), font=monospace)
+    draw.text((48, 50),plate_alpha + " " + plate_num, (100,100,100), font=monospace)
 
     # Convert back to OpenCV image and save
     blank_plate = np.array(blank_plate_pil)

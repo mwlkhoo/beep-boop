@@ -43,7 +43,16 @@ class Plate_Locator(object):
             count_loop_save = 0
             count_loop = 0
 
+            real_plate_h = 298
+            real_plate_w = 600
+
             while(True):
+                print("this is savedImage")
+                print(savedImage)
+                print("this is count_loop_save")
+                print(count_loop_save)
+                print("this is count_loop")
+                print(count_loop)
 
                 robot_cap = robot.camera.latest_image.raw_image
                 print("frame captured", flush=True)
@@ -115,15 +124,19 @@ class Plate_Locator(object):
                         endY = int(boxes[i][3] * rH)
                         dX = endX - startX
                         dY = endY - startY
+                        print(mean_angle)
 
                         if (count_box != 0):
-                           
+            
                             if (endX < frame_w / 2):
                                 mean_angle += ANGLE_ADJUST * mean_angle
                             else:
-                                 mean_angle += 0.15
+                                if (np.abs(mean_angle) > 0.08): 
+                                    mean_angle += 0.30
+                                else:
+                                    mean_angle += 0.15
                           
-
+                        
                         sin = np.sin(mean_angle)
                         dYY = int(dY * sin)
 
@@ -144,40 +157,39 @@ class Plate_Locator(object):
 
                         # try perspective transform here
                         four_points_float_reshaped = np.float32([topL, topR, bottomR, bottomL]).reshape(-1,1,2)
-                        if count_box > 0:
-                            test = orig1[startY:endY,startX:endX + dX]
-                            cv2.imshow("test",test)
-                            cv2.waitKey(5)
-                        # four_points_trans_reshaped = np.float32([[startX,startY - OFFSET],[endX + count_box * (dX + OFFSET), startY - OFFSET],[startX, endY + OFFSET],[endX + count_box * (dX + OFFSET),endY + OFFSET]]).reshape(-1,1,2)
-                        four_points_trans_reshaped = np.float32([[0,0],[dX + count_box * dX-1,0],[dX + count_box * dX-1,dY-1],[0,dY-1]]).reshape(-1,1,2)
-                        # print(four_points_float_reshaped)
-                        # print(four_points_trans_reshaped)
-                        # print("this is dX * 5")
-                        # print(dX*2)
-                        # print("this is dY * 5")
-                        # print(dY)
-                        # print(four_points_float_reshaped.shape)
-                        # print(four_points_trans_reshaped.shape)
-                        # print("this is trans")
-                        # print(four_points_trans)
+                        # if count_box > 0:
+                        #     test = orig1[startY:endY,startX:endX + dX]
+                        #     cv2.imshow("test",test)
+                        #     cv2.waitKey(5)
 
+                        # four_points_trans_reshaped = np.float32([[0,0],[dX + count_box * dX-1,0],[dX + count_box * dX-1,dY-1],[0,dY-1]]).reshape(-1,1,2)
+                        # four_points_trans_reshaped = np.float32([[0,0],[599,0],[599, 297],[0,297]]).reshape(-1,1,2)
+                        if (count_box == 0):
+                            four_points_trans_reshaped = np.float32([[0,0],[int(real_plate_w * 3 / 5) - 1,0],[int(real_plate_w * 3 / 5) - 1, real_plate_h - 1],[0,real_plate_h - 1]]).reshape(-1,1,2)
+                            M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
+                            dst = cv2.warpPerspective(orig1, M, (int(real_plate_w * 3 / 5), real_plate_h))
+                        else:
+                            four_points_trans_reshaped = np.float32([[0,0],[real_plate_w - 1,0],[real_plate_w - 1, real_plate_h - 1],[0,real_plate_h - 1]]).reshape(-1,1,2)
+                            M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
+                            dst = cv2.warpPerspective(orig1, M, (real_plate_w, real_plate_h))
                         # transform matrix
                         # desired shape: 600x298
-                        M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
-                        dst = cv2.warpPerspective(orig1, M, (dX + count_box * dX,dY))
+                        
+                        # dst = cv2.warpPerspective(orig1, M, (dX + count_box * dX,dY))
+                        
                         # print(dst)
                         if count_box == 0:
                             print("this is for plate")
-                            # cv2.imshow("frame1", dst)
+                            cv2.imshow("frame1", dst)
                             # # cv2.imshow("check", trans)
-                            # cv2.waitKey(5)
+                            cv2.waitKey(5)
                             if (count_loop_save > 5 and not savedImage):  
                                 cv2.imwrite('parking.png', dst)
                         else:
                             print("this is for plate")
-                            # cv2.imshow("frame2", dst)
+                            cv2.imshow("frame2", dst)
                             # # cv2.imshow("check", trans)
-                            # cv2.waitKey(5)
+                            cv2.waitKey(5)
                             if (count_loop_save > 5 and not savedImage):
                                 cv2.imwrite('plate.png', dst)
                                 count_loop_save = 0
@@ -209,7 +221,7 @@ class Plate_Locator(object):
                     if not savedImage:
                         count_loop_save += 1
 
-                    if savedImage:
+                    if savedImage: # this can be used to tell the bot to drive away
                         count_loop += 1
 
                     if count_loop > 50:
@@ -220,6 +232,13 @@ class Plate_Locator(object):
                     # (read_parking, read_plate) = Plate_Reader.main(self)
 
                 except (UnboundLocalError, IndexError, AttributeError):
+                    if savedImage:
+                        count_loop += 1
+
+                    if count_loop > 50:
+                        savedImage = False
+                        count_loop = 0
+
                     continue
 
 
