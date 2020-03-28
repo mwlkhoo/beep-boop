@@ -1,23 +1,51 @@
+#!/usr/bin/env python
+#from _future_ import print_function
+
 # import the necessary packages
 from imutils.object_detection import non_max_suppression
-import numpy as np
 import imutils
+
 import cv2
+import gym
+import math
+import rospy
+import roslaunch
+import time
+import numpy as np
 
-import anki_vector as av
-from anki_vector.util import degrees
+import rospy
+from geometry_msgs.msg import Twist
 
-# Modify the SN to match your robot’s SN
-ANKI_SERIAL = '005040b7'
-ANKI_BEHAVIOR = av.connection.ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY
+from cv_bridge import CvBridge, CvBridgeError
+from gym import utils, spaces
+from geometry_msgs.msg import Twist
+from std_srvs.srv import Empty
+
+from sensor_msgs.msg import Image
+
+
+# import anki_vector as av
+# from anki_vector.util import degrees
+
+
 MIN_CONFIDENCE = 0.5
-OFFSET = 8
+OFFSET = 4
 ANGLE_ADJUST = -3.0
 
 class Plate_Locator(object):
     """docstring for ClassName"""
     def __init__(self):
+
+        print("initialized success")
         
+        self.first_run = True
+
+        # For saving images purposes
+        self.savedImage = False
+        self.count_loop_save = 0
+        self.count_loop = 0
+        self.numSavedImages = 0
+
         # Desired shape
         self.desired_w = 480
         self.desired_h = 640
@@ -26,224 +54,258 @@ class Plate_Locator(object):
         self.mean = (123.68, 116.78, 103.94)
         self.net = cv2.dnn.readNet("/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/frozen_east_text_detection.pb")
         self.layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
-    
 
-    def main(self):
-        with av.Robot(serial=ANKI_SERIAL, behavior_control_level=ANKI_BEHAVIOR) as robot:
+        # Set up robot motion
+        # self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=2)
+        # self.rate = rospy.Rate(5)
+        # self.move = Twist()
 
-            print("running loop", flush=True)
+        # Set up image reader
+        self.bridge = CvBridge()
 
-            robot.behavior.set_lift_height(1.0, 10.0, 10.0, 0.0, 3)
-            robot.behavior.set_head_angle(degrees(5.0))
+        rospy.Subscriber("rrbot/camera1/image_raw",Image,self.callback)
+        # print("after callback")
 
-            robot.camera.init_camera_feed()
-            print("camera init success", flush=True)
+    def callback(self,data):
 
-            savedImage = False
-            count_loop_save = 0
-            count_loop = 0
+        try:
+            print("trying to capture frame")
+            robot_cap = self.bridge.imgmsg_to_cv2(data, "mono8")
 
-            real_plate_h = 298
-            real_plate_w = 600
+            if self.first_run:
+                # #getting properties of video
+                frame_shape = robot_cap.shape
+                self.frame_height = frame_shape[0]
+                self.frame_width = frame_shape[1]
+                # print(frame_shape)   
+                self.first_run = False  
 
-            while(True):
-                print("this is savedImage")
-                print(savedImage)
-                print("this is count_loop_save")
-                print(count_loop_save)
-                print("this is count_loop")
-                print(count_loop)
-
-                robot_cap = robot.camera.latest_image.raw_image
-                print("frame captured", flush=True)
-
-                gray = cv2.cvtColor(np.array(robot_cap), cv2.COLOR_BGR2GRAY)
-                frame_w = gray.shape[1]
-                frame_h = gray.shape[0]
-                dim = (frame_w, frame_h)
-
-                # Working with gray scale image
-                # gray = cv2.cvtColor(np.array(frame), cv2.COLOR_BGR2GRAY)
-                frame = cv2.merge((gray, gray, gray))
-                # # Make a copy of the frame
-                orig = frame.copy()
-                orig1 = frame.copy()
-
-                frame = cv2.resize(frame, self.d_dim, interpolation = cv2.INTER_AREA)
-       
-                rW = float(frame_w) / float(self.desired_w)
-                rH = float(frame_h) / float(self.desired_h)
-
-                # construct a blob from the frame and then perform a forward pass
-                # of the model to obtain the two output layer sets
-                blob = cv2.dnn.blobFromImage(frame, 1.0, self.d_dim, self.mean, swapRB = False, crop = False)
-                self.net.setInput(blob)
-                (scores , geometry) = self.net.forward(self.layerNames)
-                # decode the predictions, then  apply non-maxima suppression to
-                # suppress weak, overlapping bounding boxes
-                (rects, confidences, mean_angle) = Plate_Locator.decode_predictions(scores, geometry)
-                # print(confidences)
-                boxes = non_max_suppression(np.array(rects), probs=confidences)
-
-                minY = self.desired_h - 1
-                minX = self.desired_w - 1
-
-                try:
-
-                    num_boxes = boxes.shape[0]
-                    # print(num_boxes)
-                          # # Find the order of boxes
-                    for i in range (num_boxes):
-                        if minY > boxes[i][1]:
-                            minY = boxes[i][1]
-                            parking = i
-
-                    for i in range (num_boxes):
-                        if minX > boxes[i][0]:
-                            if (i != parking):
-                                minX = boxes[i][0]
-                                lhs = i
-
-                    # for i in range (num_boxes):
-                    #     if i != parking and i != lhs:
-                    #         rhs = i
-
-                  
-                    order = [parking, lhs]
-                    # print(order)
-                    count_box = 0
-                    
-
-                    for i in order:
-                        # scale the bounding box coordinates based on the respective
-                        # ratios
-                    
-                        startX = int(boxes[i][0] * rW)
-                        startY = int(boxes[i][1] * rH)
-                        endX = int(boxes[i][2] * rW)
-                        endY = int(boxes[i][3] * rH)
-                        dX = endX - startX
-                        dY = endY - startY
-                        print(mean_angle)
-
-                        if (count_box != 0):
+            self.locate_plate(robot_cap)
             
-                            if (endX < frame_w / 2):
-                                mean_angle += ANGLE_ADJUST * mean_angle
-                            else:
-                                if (np.abs(mean_angle) > 0.08): 
-                                    mean_angle += 0.30
-                                else:
-                                    mean_angle += 0.15
-                          
-                        
-                        sin = np.sin(mean_angle)
-                        dYY = int(dY * sin)
 
-                        # topL = [startX - count_box * OFFSET, startY + dYY - OFFSET]
-                        # topR = [endX + count_box * (dX + OFFSET), startY - dYY - OFFSET]
-                        # bottomL = [startX - count_box * OFFSET, endY + dYY + OFFSET]
-                        # bottomR = [endX + count_box * (dX + OFFSET), endY - dYY + OFFSET]
+        except CvBridgeError as e:
+            print(e)
 
-                        topL = [startX, startY + dYY - OFFSET]
-                        topR = [endX + count_box * (dX + OFFSET), startY - dYY - OFFSET]
-                        bottomL = [startX , endY + dYY + OFFSET]
-                        bottomR = [endX + count_box * (dX + OFFSET), endY - dYY + OFFSET]
-                        four_points = np.int32([topL, topR, bottomR, bottomL])
-                        # print("this is before reshape")
-                        # print(four_points)
-                        four_points = four_points.reshape((-1,1,2))
-                        trans = cv2.polylines(orig, [four_points], True, (255,0,0), 3)
 
-                        # try perspective transform here
-                        four_points_float_reshaped = np.float32([topL, topR, bottomR, bottomL]).reshape(-1,1,2)
-                        # if count_box > 0:
-                        #     test = orig1[startY:endY,startX:endX + dX]
-                        #     cv2.imshow("test",test)
-                        #     cv2.waitKey(5)
+    def locate_plate(self, robot_cap):   
 
-                        # four_points_trans_reshaped = np.float32([[0,0],[dX + count_box * dX-1,0],[dX + count_box * dX-1,dY-1],[0,dY-1]]).reshape(-1,1,2)
-                        # four_points_trans_reshaped = np.float32([[0,0],[599,0],[599, 297],[0,297]]).reshape(-1,1,2)
-                        if (count_box == 0):
-                            four_points_trans_reshaped = np.float32([[0,0],[int(real_plate_w * 3 / 5) - 1,0],[int(real_plate_w * 3 / 5) - 1, real_plate_h - 1],[0,real_plate_h - 1]]).reshape(-1,1,2)
-                            M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
-                            dst = cv2.warpPerspective(orig1, M, (int(real_plate_w * 3 / 5), real_plate_h))
+        real_plate_h = 298
+        real_plate_w = 600
+
+        # print("this many images have been saved / recognized")
+        # print(self.numSavedImages)
+        # print("has it been saved?")
+        # print(self.savedImage)
+        # print("seen it, hasn't been saved for this many loops:")
+        # print(self.count_loop_save)
+        # print("moved on for this many loops:")
+        # print(self.count_loop)
+
+        print("frame captured")
+
+        frame_w = self.frame_width
+        frame_h = self.frame_height
+
+        # Working with gray scale image
+        # gray = cv2.cvtColor(np.array(frame), cv2.COLOR_BGR2GRAY)
+        frame = cv2.merge((robot_cap, robot_cap, robot_cap))
+        # # Make a copy of the frame
+        orig = frame.copy()
+        orig1 = frame.copy()
+
+        frame = cv2.resize(frame, self.d_dim, interpolation = cv2.INTER_AREA)
+
+        rW = float(frame_w) / float(self.desired_w)
+        rH = float(frame_h) / float(self.desired_h)
+
+        # construct a blob from the frame and then perform a forward pass
+        # of the model to obtain the two output layer sets
+        blob = cv2.dnn.blobFromImage(frame, 1.0, self.d_dim, self.mean, swapRB = False, crop = False)
+        self.net.setInput(blob)
+        (scores , geometry) = self.net.forward(self.layerNames)
+        # decode the predictions, then  apply non-maxima suppression to
+        # suppress weak, overlapping bounding boxes
+        (rects, confidences, mean_angle) = self.decode_predictions(scores, geometry)
+        # print(confidences)
+        boxes = non_max_suppression(np.array(rects), probs=confidences)
+
+        minY = self.desired_h - 1
+        minX = self.desired_w - 1
+
+        # print("just testing how slow this is")
+
+        try:
+
+            num_boxes = boxes.shape[0]
+            # print(num_boxes)
+                  # # Find the order of boxes
+            for i in range (num_boxes):
+                if (minY > boxes[i][1] and boxes[i][1] < int(self.desired_h / 2)):
+                    minY = boxes[i][1]
+                    parking = i
+
+            for i in range (num_boxes):
+                if minX > boxes[i][0]:
+                    if (i != parking):
+                        minX = boxes[i][0]
+                        lhs = i
+
+            # for i in range (num_boxes):
+            #     if i != parking and i != lhs:
+            #         rhs = i
+
+          
+            order = [parking, lhs]
+            # print(order)
+            count_box = 0
+            
+
+            for i in order:
+                # scale the bounding box coordinates based on the respective
+                # ratios
+            
+                startX = int(boxes[i][0] * rW)
+                startY = int(boxes[i][1] * rH)
+                endX = int(boxes[i][2] * rW)
+                endY = int(boxes[i][3] * rH)
+                dX = endX - startX
+                dY = endY - startY
+                
+
+                if (count_box != 0 and self.numSavedImages > 0):
+    
+                    if (endX < frame_w / 2):
+                        mean_angle += ANGLE_ADJUST * mean_angle
+                    else:
+                        if (np.abs(mean_angle) > 0.08): 
+                            mean_angle += 0.15
                         else:
-                            four_points_trans_reshaped = np.float32([[0,0],[real_plate_w - 1,0],[real_plate_w - 1, real_plate_h - 1],[0,real_plate_h - 1]]).reshape(-1,1,2)
-                            M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
-                            dst = cv2.warpPerspective(orig1, M, (real_plate_w, real_plate_h))
-                        # transform matrix
-                        # desired shape: 600x298
-                        
-                        # dst = cv2.warpPerspective(orig1, M, (dX + count_box * dX,dY))
-                        
-                        # print(dst)
-                        if count_box == 0:
-                            print("this is for plate")
-                            cv2.imshow("frame1", dst)
-                            # # cv2.imshow("check", trans)
-                            cv2.waitKey(5)
-                            if (count_loop_save > 5 and not savedImage):  
-                                cv2.imwrite('parking.png', dst)
-                        else:
-                            print("this is for plate")
-                            cv2.imshow("frame2", dst)
-                            # # cv2.imshow("check", trans)
-                            cv2.waitKey(5)
-                            if (count_loop_save > 5 and not savedImage):
-                                cv2.imwrite('plate.png', dst)
-                                count_loop_save = 0
-                                savedImage = True
+                            mean_angle += 0.05
+                  
+                print(mean_angle)
+                sin = np.sin(mean_angle)
+                dYY = int(dY * sin)
 
-                        # if count_box == 0:
-                        #     parking_num = orig1[startY-OFFSET : endY+OFFSET, startX:endX]
-                        #     if not self.savedImage:  
-                        #         cv2.imwrite('parking.png', parking_num)
-                           
-                        # else:
-                        #     plate = orig1[startY-OFFSET : endY+OFFSET, startX: endX + dX + OFFSET]
-                        #     if not self.savedImage:
-                        #         cv2.imwrite('plate.png', plate)
-                        #         self.savedImage = True
+                # topL = [startX - count_box * OFFSET, startY + dYY - OFFSET]
+                # topR = [endX + count_box * (dX + OFFSET), startY - dYY - OFFSET]
+                # bottomL = [startX - count_box * OFFSET, endY + dYY + OFFSET]
+                # bottomR = [endX + count_box * (dX + OFFSET), endY - dYY + OFFSET]
 
-                        count_box += 1
+                topL = [startX, startY + dYY]
+                topR = [endX + count_box * (dX) + (1 - count_box) * (OFFSET), startY - dYY]
+                bottomL = [startX , endY + dYY + OFFSET]
+                bottomR = [endX + count_box * (dX) + (1 - count_box) * (OFFSET), endY - dYY + OFFSET]
+                four_points = np.int32([topL, topR, bottomR, bottomL])
+                # print("this is before reshape")
+                # print(four_points)
+                four_points = four_points.reshape((-1,1,2))
+                trans = cv2.polylines(orig, [four_points], True, (255,0,0), 3)
+
+                # try perspective transform here
+                
+                # if count_box > 0:
+                #     test = orig1[startY:endY,startX:endX + dX]
+                #     cv2.imshow("test",test)
+                #     cv2.waitKey(5)
+
+                # four_points_trans_reshaped = np.float32([[0,0],[dX + count_box * dX-1,0],[dX + count_box * dX-1,dY-1],[0,dY-1]]).reshape(-1,1,2)
+                # four_points_trans_reshaped = np.float32([[0,0],[599,0],[599, 297],[0,297]]).reshape(-1,1,2)
+                # if (self.numSavedImages > 1):
+                four_points_float_reshaped = np.float32([topL, topR, bottomR, bottomL]).reshape(-1,1,2)
+
+                if (count_box == 0):
+                    four_points_trans_reshaped = np.float32([[0,0],[int(real_plate_w * 3 / 5) - 1,0],[int(real_plate_w * 3 / 5) - 1, real_plate_h - 1],[0,real_plate_h - 1]]).reshape(-1,1,2)
+                    M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
+                    dst = cv2.warpPerspective(orig1, M, (int(real_plate_w * 3 / 5), real_plate_h))
+                else:
+                    four_points_trans_reshaped = np.float32([[0,0],[real_plate_w - 1,0],[real_plate_w - 1, real_plate_h - 1],[0,real_plate_h - 1]]).reshape(-1,1,2)
+                    M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
+                    dst = cv2.warpPerspective(orig1, M, (real_plate_w, real_plate_h))
+                
+                # else:
+                #     dst_before = orig1[startY + dYY:endY + dYY + OFFSET,startX:endX + count_box * (dX) + (1 - count_box) * (OFFSET)]
+                   
+                #     if (count_box == 0):
+                #         dst = cv2.resize(dst_before, dsize=(int(real_plate_w * 3 / 5), real_plate_h), interpolation=cv2.INTER_CUBIC)
+
+                #     else:
+                #         dst = cv2.resize(dst_before, dsize=(real_plate_w, real_plate_h), interpolation=cv2.INTER_CUBIC)
+                #         print(dst.shape)
+                
+                if count_box == 0:
+                    
+                    cv2.imshow("frame1", dst)
+                    # # cv2.imshow("check", trans)
+                    cv2.waitKey(5)
+
+                    if (self.count_loop_save > 5 and not self.savedImage):  
+                        print("this is for parking")
+                        cv2.imwrite('parking.png', dst)
+
+                else:
+                    cv2.imshow("frame2", dst)
+                    # # cv2.imshow("check", trans)
+                    cv2.waitKey(5)
+
+                    if (self.count_loop_save > 5 and not self.savedImage):
+                        print("this is for plate")
+                        cv2.imwrite('plate.png', dst)
+                        self.count_loop_save = 0
+                        self.savedImage = True
+                        self.numSavedImages += 1
+
+                # if count_box == 0:
+                #     parking_num = orig1[startY-OFFSET : endY+OFFSET, startX:endX]
+                #     if not self.savedImage:  
+                #         cv2.imwrite('parking.png', parking_num)
+                   
+                # else:
+                #     plate = orig1[startY-OFFSET : endY+OFFSET, startX: endX + dX + OFFSET]
+                #     if not self.savedImage:
+                #         cv2.imwrite('plate.png', plate)
+                #         self.savedImage = True
+
+                count_box += 1
 
 
 
-                    # show the output frame
-                    cv2.imshow("Text Detection", trans)
-                    key = cv2.waitKey(1) & 0xFF
-                    # if the `q` key was pressed, break from the loop
-                    if key == ord("q"):
-                        break
+            # show the output frame
+            cv2.imshow("Text Detection", trans)
+            cv2.waitKey(5)
+            # if the `q` key was pressed, break from the loop
+            # if key == ord("q"):
+            #     break
 
-                    # wait until stable then save
-                    if not savedImage:
-                        count_loop_save += 1
+            # wait until stable then save
+            if not self.savedImage:
+                self.count_loop_save += 1
 
-                    if savedImage: # this can be used to tell the bot to drive away
-                        count_loop += 1
+            if self.savedImage: # this can be used to tell the bot to drive away
+                self.count_loop += 1
 
-                    if count_loop > 50:
-                        savedImage = False
-                        count_loop = 0
-                        
-                    # call the plate_reader.py
-                    # (read_parking, read_plate) = Plate_Reader.main(self)
+            if self.count_loop > 50:
+                self.savedImage = False
+                self.count_loop = 0
+                
+            # call the plate_reader.py
+            # (read_parking, read_plate) = Plate_Reader.main(self)
 
-                except (UnboundLocalError, IndexError, AttributeError):
-                    if savedImage:
-                        count_loop += 1
+        except (UnboundLocalError, IndexError, AttributeError):
 
-                    if count_loop > 50:
-                        savedImage = False
-                        count_loop = 0
+            # print("entered exception block. How slow is this?")
 
-                    continue
+            if self.savedImage:
+                self.count_loop += 1
+
+            if self.count_loop > 50:
+                self.savedImage = False
+                self.count_loop = 0
+
+            
 
 
 
-    def decode_predictions(scores, geometry):
+    def decode_predictions(self, scores, geometry):
         # grab the number of rows and columns from the scores volume, then
         # initialize our set of bounding box rectangles and corresponding
         # confidence scores
@@ -290,4 +352,9 @@ class Plate_Locator(object):
         return (rects, confidences, np.mean(angles))
 
 if __name__ == "__main__":
-    Plate_Locator().main()
+
+    rospy.init_node('plate_locator', anonymous=True)
+    myPlateLocator = Plate_Locator()
+
+    # spin() simply keeps python from exiting until this node is stopped
+    rospy.spin()
