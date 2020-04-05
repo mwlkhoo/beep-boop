@@ -206,5 +206,4 @@ class Plate_Reader(object):
             return (parking, plate)
 
 if __name__ == "__main__":
-    plate_reader = Plate_Reader()
-    plate_reader.main()
+    Plate_Reader.main()

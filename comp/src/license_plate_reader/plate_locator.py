@@ -18,7 +18,6 @@ import time
 import numpy as np
 
 import rospy
-from geometry_msgs.msg import Twist
 
 from cv_bridge import CvBridge, CvBridgeError
 from gym import utils, spaces
@@ -26,10 +25,6 @@ from geometry_msgs.msg import Twist
 from std_srvs.srv import Empty
 
 from sensor_msgs.msg import Image
-
-
-# import anki_vector as av
-# from anki_vector.util import degrees
 
 
 MIN_CONFIDENCE = 0.5
