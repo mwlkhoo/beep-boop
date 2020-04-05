@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
+import tensorflow as tf
+from tensorflow import keras
 from keras.models import model_from_json
 from PIL import Image
 
@@ -18,15 +20,27 @@ LEARNING_RATE = 1e-4
 # Define char list
 CHAR = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-# Modify the SN to match your robot’s SN
-# ANKI_SERIAL = '005040b7'
-# ANKI_BEHAVIOR = av.connection.ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY
 EDGE_THRESHOLD = 120
 BW_THRESHOLD = 80
 PLATE_BW_THRESHOLD =50
 
 class Plate_Reader(object):
     def __init__(self):
+
+        # self.graph = tf.get_default_graph()
+
+        config = tf.ConfigProto(
+            # device_count={'GPU': 1},
+            intra_op_parallelism_threads=1,
+            allow_soft_placement=True
+            )
+
+        config.gpu_options.allow_growth = True
+        config.gpu_options.per_process_gpu_memory_fraction = 0.6
+
+        self.session = tf.Session(config=config)
+
+        keras.backend.set_session(self.session)
 
          # load the trained model
         json_file = open('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/blur_license_plate_model.json', 'r')
@@ -37,6 +51,7 @@ class Plate_Reader(object):
         # load weights into new model
         self.loaded_model.load_weights('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/blur_license_plate_model.h5')
         print("Loaded model from disk")
+        self.loaded_model._make_predict_function()
 
     def main(self):
         # change to anki's camera later
@@ -95,7 +110,7 @@ class Plate_Reader(object):
             # 1 = left most, 4 = right most
 
             plate_1 = plate_num[:,: int(plate_w / 4)]
-            plate_2 = plate_num[:, int(plate_w / 4)-30: int(plate_w / 2) - 10]
+            plate_2 = plate_num[:, int(plate_w / 4)-25: int(plate_w / 2) - 10]
             plate_3 = plate_num[:, int(plate_w / 2)+25: int(plate_w * 3/ 4)+15]
             plate_4 = plate_num[:, int(plate_w * 3/ 4)+10:]
 
@@ -160,12 +175,15 @@ class Plate_Reader(object):
 
 
             # # predict 
-            y_predict_park = self.loaded_model.predict(nor_park_aug)[0]
+            with self.session.as_default():
+                with self.session.graph.as_default():
+                    print("get passed here!")
+                    y_predict_park = self.loaded_model.predict(nor_park_aug)[0]
 
-            y_predict_p1 = self.loaded_model.predict(nor_p1_aug)[0]
-            y_predict_p2 = self.loaded_model.predict(nor_p2_aug)[0]
-            y_predict_p3 = self.loaded_model.predict(nor_p3_aug)[0]
-            y_predict_p4 = self.loaded_model.predict(nor_p4_aug)[0]
+                    y_predict_p1 = self.loaded_model.predict(nor_p1_aug)[0]
+                    y_predict_p2 = self.loaded_model.predict(nor_p2_aug)[0]
+                    y_predict_p3 = self.loaded_model.predict(nor_p3_aug)[0]
+                    y_predict_p4 = self.loaded_model.predict(nor_p4_aug)[0]
 
             # print(y_predict_p1[10:36])
             pred_index_park = np.argmax(y_predict_park[:10])
@@ -176,16 +194,17 @@ class Plate_Reader(object):
             pred_index_p2 = np.argmax(y_predict_p2[10:36])
             pred_index_p3 = np.argmax(y_predict_p3[:10])
             pred_index_p4 = np.argmax(y_predict_p4[:10])
-            print("this should be O")
-            print(y_predict_p2[10:36])
+            # print("this should be C")
+            # print(y_predict_p2[10:36])
 
             # print(CHAR[pred_index_park], CHAR[pred_index_p1 + 10], CHAR[pred_index_p2 + 10], CHAR[pred_index_p3], CHAR[pred_index_p4])
 
             parking = ['P', CHAR[pred_index_park]]
             plate = [CHAR[pred_index_p1 + 10], CHAR[pred_index_p2 + 10], CHAR[pred_index_p3], CHAR[pred_index_p4]]
-            print(parking)
-            print(plate)
-            # # return (read_parking, read_plate)
+            # print(parking)
+            # print(plate)
+            return (parking, plate)
 
 if __name__ == "__main__":
-    Plate_Reader().main()
+    plate_reader = Plate_Reader()
+    plate_reader.main()

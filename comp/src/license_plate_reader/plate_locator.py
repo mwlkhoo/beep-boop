@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 #from _future_ import print_function
 
+# import the file and the class from plate_reader.py
+from plate_reader import Plate_Reader
+my_plate_reader = Plate_Reader()
+
 # import the necessary packages
 from imutils.object_detection import non_max_suppression
 import imutils
@@ -238,7 +242,7 @@ class Plate_Locator(object):
                     # # cv2.imshow("check", trans)
                     cv2.waitKey(5)
 
-                    if (self.count_loop_save > 5 and not self.savedImage):  
+                    if (self.count_loop_save >2 and not self.savedImage):  
                         print("this is for parking")
                         cv2.imwrite('parking.png', dst)
 
@@ -247,9 +251,11 @@ class Plate_Locator(object):
                     # # cv2.imshow("check", trans)
                     cv2.waitKey(5)
 
-                    if (self.count_loop_save > 5 and not self.savedImage):
+                    if (self.count_loop_save > 2 and not self.savedImage):
                         print("this is for plate")
                         cv2.imwrite('plate.png', dst)
+                        result = my_plate_reader.main()
+                        print(result)
                         self.count_loop_save = 0
                         self.savedImage = True
                         self.numSavedImages += 1
@@ -283,7 +289,7 @@ class Plate_Locator(object):
             if self.savedImage: # this can be used to tell the bot to drive away
                 self.count_loop += 1
 
-            if self.count_loop > 50:
+            if self.count_loop > 10:
                 self.savedImage = False
                 self.count_loop = 0
                 
@@ -297,7 +303,7 @@ class Plate_Locator(object):
             if self.savedImage:
                 self.count_loop += 1
 
-            if self.count_loop > 50:
+            if self.count_loop > 10:
                 self.savedImage = False
                 self.count_loop = 0
 
