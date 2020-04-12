@@ -56,7 +56,7 @@ class Control(object):
 
             time_elapsed = rospy.get_time() - self.time_start
 
-            if time_elapsed < 241 and not self.allDone:
+            if time_elapsed < 240 and not self.allDone:
                 print("trying to capture frame")
                 robot_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
 
