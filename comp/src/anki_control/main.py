@@ -24,6 +24,7 @@ class Control(object):
         # would probably be the same for all classes
         print("initialized success")
         
+        self.allDone = False
         self.first_run = True
 
         # Set up image reader
@@ -55,7 +56,7 @@ class Control(object):
 
             time_elapsed = rospy.get_time() - self.time_start
 
-            if time_elapsed < 241:
+            if time_elapsed < 241 and not self.allDone:
                 print("trying to capture frame")
                 robot_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
 
