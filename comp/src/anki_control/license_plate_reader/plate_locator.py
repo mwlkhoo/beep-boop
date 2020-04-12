@@ -25,12 +25,9 @@ from geometry_msgs.msg import Twist
 from std_srvs.srv import Empty
 
 from sensor_msgs.msg import Image
-
-
-MIN_CONFIDENCE = 0.5
-OFFSET = 4
-ANGLE_ADJUST = 3.5
-EDGE_THRESHOLD = 10
+import sys
+sys.path.insert(1, '/home/fizzer/enph353_git/beep-boop/comp/src/anki_control')
+import constants
 
 class Plate_Locator(object):
     """docstring for ClassName"""
@@ -54,19 +51,13 @@ class Plate_Locator(object):
         self.d_dim = (self.desired_w, self.desired_h)
 
         self.mean = (123.68, 116.78, 103.94)
-        self.net = cv2.dnn.readNet("/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/frozen_east_text_detection.pb")
+        self.net = cv2.dnn.readNet("/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/license_plate_reader/frozen_east_text_detection.pb")
         self.layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
-
-        # Set up robot motion
-        # self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=2)
-        # self.rate = rospy.Rate(5)
-        # self.move = Twist()
 
         # Set up image reader
         self.bridge = CvBridge()
 
         rospy.Subscriber("rrbot/camera1/image_raw",Image,self.callback)
-        # print("after callback")
 
     def callback(self,data):
 
@@ -188,12 +179,14 @@ class Plate_Locator(object):
 
                 else: # if there's only 1 box, we need to determine whether it's looking at parking or plate
                     if boxes[0][1] < int(self.desired_h / 2):    # if starting y is on the upper half - call it parking.
+                        print("checking in first")
                         box_topL_x = int(boxes[0][0] * rW) - 30
                         box_topL_y = int(boxes[0][1] * rH) - 30
                         box_bottomR_x = int(boxes[0][0] * rW) + 90
                         box_bottomR_y = int(boxes[0][1] * rH) + 160 
 
                     else:       # else - call it plate.
+                        print("checking in second")
                         box_topL_x = int(boxes[0][0] * rW) - 30
                         box_topL_y = int(boxes[0][1] * rH) - 100
                         box_bottomR_x = int(boxes[0][0] * rW) + 90
@@ -219,7 +212,7 @@ class Plate_Locator(object):
                 # print("entered cropping sesh")
                 cropped_layer = cropped_orig[:,:,0]
                 # print(cropped_layer)
-                black_x = np.where(cropped_layer < EDGE_THRESHOLD)[1]
+                black_x = np.where(cropped_layer < constants.CROPPING_EDGE_THRESHOLD)[1]
                 starting_x_both = np.min(black_x)
                 ending_x_both = np.max(black_x)
 
@@ -239,7 +232,7 @@ class Plate_Locator(object):
 
                 # note that the y's aren't in line, we need to figure out which is which
                 # parking:::
-                parking_black_xy = np.where(cropped_layer_top < EDGE_THRESHOLD)
+                parking_black_xy = np.where(cropped_layer_top < constants.CROPPING_EDGE_THRESHOLD)
                 # print("this is x-y of the edges")
                 # print(parking_black_xy)
                 parking_black_x = parking_black_xy[1]
@@ -262,7 +255,7 @@ class Plate_Locator(object):
                 parking_indices_bottomL_y = parking_black_y[parking_indices_bottomL_x]
                 parking_indices_bottomR_y = parking_black_y[parking_indices_bottomR_x]
                 # make sure image cropping is proper, no edges are trimmed (i.e. no triangles are drawn)
-                if (parking_indices_topL_y != parking_indices_bottomL_y) and (parking_indices_topR_y != parking_indices_bottomR_y):
+                if (parking_indices_bottomL_y - parking_indices_topL_y > 10) and (parking_indices_bottomR_y - parking_indices_topR_y > 10):
                     
                     # print(indices_topL_y, indices_topR_y, indices_bottomR_y, indices_bottomL_y)
                     parking_topL = [0, parking_indices_topL_y]
@@ -281,7 +274,7 @@ class Plate_Locator(object):
 
 
                     # plate:::
-                    plate_black_xy = np.where(cropped_layer_bottom < EDGE_THRESHOLD)
+                    plate_black_xy = np.where(cropped_layer_bottom < constants.CROPPING_EDGE_THRESHOLD)
                     # print("this is x-y of the edges")
                     # print(parking_black_xy)
                     plate_black_x = plate_black_xy[1]
@@ -304,7 +297,7 @@ class Plate_Locator(object):
                     plate_indices_bottomL_y = plate_black_y[plate_indices_bottomL_x]
                     plate_indices_bottomR_y = plate_black_y[plate_indices_bottomR_x]
 
-                    if (plate_indices_topL_y != plate_indices_bottomL_y) and (plate_indices_topR_y != plate_indices_bottomR_y):
+                    if (plate_indices_bottomL_y - plate_indices_topL_y > 10) and (plate_indices_bottomR_y - plate_indices_topR_y > 10):
 
                     # print(indices_topL_y, indices_topR_y, indices_bottomR_y, indices_bottomL_y)
                         plate_topL = [0, plate_indices_topL_y]
@@ -339,11 +332,11 @@ class Plate_Locator(object):
                             self.count_loop = 0
                             self.numSavedImages += 1
 
-                            # cv2.imshow("this would be saved as parking", parking_image)
+                            cv2.imshow("this would be saved as parking", parking_image)
                             cv2.imwrite('parking.png', parking_image)
                             print("saved parking image to folder")
 
-                            # cv2.imshow("this would be saved as plate", plate_image)
+                            cv2.imshow("this would be saved as plate", plate_image)
                             cv2.imwrite('plate.png', plate_image)
                             print("saved plate image to folder")
 
@@ -358,71 +351,8 @@ class Plate_Locator(object):
                             if (self.count_loop_save == 1):
                                 self.count_detect_mode = 41                    
 
-
-                    # uncomment from here
-                    # four_points_float_reshaped = np.float32([topL, topR, bottomR, bottomL]).reshape(-1,1,2)
-
-                    # if (count_box == 0):
-                    #     four_points_trans_reshaped = np.float32([[0,0],[int(real_plate_w * 3 / 5) - 1,0],[int(real_plate_w * 3 / 5) - 1, real_plate_h - 1],[0,real_plate_h - 1]]).reshape(-1,1,2)
-                    #     M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
-                    #     dst = cv2.warpPerspective(orig1, M, (int(real_plate_w * 3 / 5), real_plate_h))
-                    # else:
-                    #     four_points_trans_reshaped = np.float32([[0,0],[real_plate_w - 1,0],[real_plate_w - 1, real_plate_h - 1],[0,real_plate_h - 1]]).reshape(-1,1,2)
-                    #     M = cv2.getPerspectiveTransform(four_points_float_reshaped, four_points_trans_reshaped)
-                    #     dst = cv2.warpPerspective(orig1, M, (real_plate_w, real_plate_h))
-                    # uncomment till here
-                    # else:
-                    #     dst_before = orig1[startY + dYY:endY + dYY + OFFSET,startX:endX + count_box * (dX) + (1 - count_box) * (OFFSET)]
-                       
-                    #     if (count_box == 0):
-                    #         dst = cv2.resize(dst_before, dsize=(int(real_plate_w * 3 / 5), real_plate_h), interpolation=cv2.INTER_CUBIC)
-
-                    #     else:
-                    #         dst = cv2.resize(dst_before, dsize=(real_plate_w, real_plate_h), interpolation=cv2.INTER_CUBIC)
-                    #         print(dst.shape)
-                    # uncomment from here
-                    # if count_box == 0:
-                        
-                    #     # cv2.imshow("frame1", dst)
-                    #     # # cv2.imshow("check", trans)
-                    #     # cv2.waitKey(5)
-
-                    #     if (self.count_loop_save >0):  
-                    #         print("this is for parking")
-                    #         cv2.imwrite('parking.png', dst)
-
-                    # else:
-                    #     cv2.imshow("frame2", dst)
-                    #     # # cv2.imshow("check", trans)
-                    #     cv2.waitKey(5)
-
-                    #     if (self.count_loop_save > 0):
-                            
-                    #         self.savedImage = True
-                    #         self.count_loop_save = 0
-                    #         self.count_loop = 0
-                    #         self.numSavedImages += 1
-
-                    #         print("this is for plate")
-                    #         cv2.imwrite('plate.png', dst)
-
-                    #         result = my_plate_reader.main()
-                    #         # print(result)
-                    #         self.result_file.write(''.join(result))
-                    #         self.result_file.write('\n')
-                    # uncomment till here
-                    # count_box += 1
-                    # uncomment til here
-
-
-
             except (UnboundLocalError, IndexError, AttributeError):
                 self.count_loop += 1
-
-                # if self.count_loop > 10:
-                #     self.savedImage = False
-                #     self.count_loop = 0
-                #     self.count_loop_save = 0
 
             
         else:
@@ -432,13 +362,7 @@ class Plate_Locator(object):
             if self.count_loop > 80:
                 self.savedImage = False
                 self.count_loop = 0
-                # self.count_loop_save = 0
-                # self.count_detect_mode = 0
-
-            # print("Destroying window")
-            # cv2.destroyAllWindows()
-
-
+    
 
     def decode_predictions(self, scores, geometry):
         # grab the number of rows and columns from the scores volume, then
@@ -455,7 +379,7 @@ class Plate_Locator(object):
         anglesData = np.array([geometry[0, 4, y] for y in range(numRows)])
 
         # # trying to get all useful x's
-        useful_xs = np.where(scoresData > MIN_CONFIDENCE)
+        useful_xs = np.where(scoresData > constants.MIN_CONFIDENCE)
         useful_xs_rows = useful_xs[0]
         useful_xs_cols = useful_xs[1]
 

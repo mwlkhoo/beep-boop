@@ -1,9 +1,6 @@
 import cv2
 import numpy as np
 
-K_TURN = 1
-K_DRIVE = 1
-
 class Detect_Pedestrian(object):
 
     def __init__(self):
@@ -50,7 +47,7 @@ class Detect_Pedestrian(object):
             print("this is back")
             print(good_points_back)
 
-        if len(good_points_front) > 5 or len(good_points_back) > 5:      
+        if len(good_points_front) > 2 or len(good_points_back) > 2:      
             print("Pedestrian is crossing!!")
             return True
 

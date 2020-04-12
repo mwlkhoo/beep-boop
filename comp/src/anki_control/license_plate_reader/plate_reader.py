@@ -11,18 +11,11 @@ from keras import layers
 from keras import models
 from keras import optimizers
 
-# import anki_vector as av
-# from anki_vector.util import degrees
-
-# Define learning rate
-LEARNING_RATE = 1e-4   
-
-# Define char list
-CHAR = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-
-EDGE_THRESHOLD = 120
-BW_THRESHOLD = 80
-PLATE_BW_THRESHOLD =50
+import sys
+sys.path.insert(1, '/home/fizzer/enph353_git/beep-boop/comp/src/anki_control')
+import constants
+# BW_THRESHOLD = 80
+# PLATE_BW_THRESHOLD =50
 
 class Plate_Reader(object):
     def __init__(self):
@@ -43,13 +36,13 @@ class Plate_Reader(object):
         keras.backend.set_session(self.session)
 
          # load the trained model
-        json_file = open('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/blur_license_plate_model.json', 'r')
+        json_file = open('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/license_plate_reader/blur_license_plate_model.json', 'r')
         loaded_model_json = json_file.read()
         json_file.close()
         self.loaded_model = model_from_json(loaded_model_json)
 
         # load weights into new model
-        self.loaded_model.load_weights('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/blur_license_plate_model.h5')
+        self.loaded_model.load_weights('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/license_plate_reader/blur_license_plate_model.h5')
         print("Loaded model from disk")
         self.loaded_model._make_predict_function()
 
@@ -57,8 +50,8 @@ class Plate_Reader(object):
         # change to anki's camera later
         # while(True):
             # getting the saved image (saved in plate_locator.py)
-        gray_parking = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/parking.png', cv2.IMREAD_GRAYSCALE)
-        gray_plate = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/plate.png', cv2.IMREAD_GRAYSCALE)
+        gray_parking = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/license_plate_reader/parking.png', cv2.IMREAD_GRAYSCALE)
+        gray_plate = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/license_plate_reader/plate.png', cv2.IMREAD_GRAYSCALE)
 
         # gray_parking = cv2.cvtColor(np.array(parking_num_raw), cv2.COLOR_BGR2GRAY)
         parking_num_raw = cv2.merge((gray_parking, gray_parking, gray_parking))
@@ -73,14 +66,14 @@ class Plate_Reader(object):
 
         # find where the first white pixel starts
         try:
-            (parking_x, parking_y) = np.where(parking_num_layer > EDGE_THRESHOLD)[1], np.where(parking_num_layer > EDGE_THRESHOLD)[0]
+            (parking_x, parking_y) = np.where(parking_num_layer > constants.READING_EDGE_THRESHOLD)[1], np.where(parking_num_layer > constants.READING_EDGE_THRESHOLD)[0]
             parking_topL_x = np.min(parking_x)
             parking_topL_y = np.min(parking_y)
             parking_bottomR_x = np.max(parking_x)
             parking_bottomR_y = np.max(parking_y)
 
 
-            (plate_x, plate_y) = np.where(plate_num_layer > EDGE_THRESHOLD)[1], np.where(plate_num_layer > EDGE_THRESHOLD)[0]
+            (plate_x, plate_y) = np.where(plate_num_layer > constants.READING_EDGE_THRESHOLD)[1], np.where(plate_num_layer > constants.READING_EDGE_THRESHOLD)[0]
             plate_topL_x = np.min(plate_x)
             plate_topL_y = np.min(plate_y)
             plate_bottomR_x = np.max(plate_x)
@@ -101,9 +94,9 @@ class Plate_Reader(object):
         parking_num = parking_num_raw[parking_topL_y:parking_bottomR_y, parking_topL_x:parking_bottomR_x]
        
         plate_num = plate_num_raw[plate_topL_y:plate_bottomR_y, plate_topL_x:plate_bottomR_x]
-        # cv2.imshow("cropped parking", parking_num)
-        # cv2.imshow("cropped plate", plate_num)
-        # cv2.waitKey(5)
+        cv2.imshow("processed parking", parking_num)
+        cv2.imshow("processed plate", plate_num)
+        cv2.waitKey(5)
 
         # slice it
         # get the shape of each array
@@ -200,13 +193,21 @@ class Plate_Reader(object):
         pred_index_p2 = np.argmax(y_predict_p2[10:36])
         pred_index_p3 = np.argmax(y_predict_p3[:10])
         pred_index_p4 = np.argmax(y_predict_p4[:10])
-        # print("this should be C")
-        # print(y_predict_p2[10:36])
+        print("this should be P")
+        print(y_predict_p1[10:36])
+        print("this should be 2")
+        print(y_predict_p4[:10])
+        if pred_index_p1 == 5:
+            if y_predict_p1[15] > 0.05:
+                pred_index_p1 = 15
+        if pred_index_p2 == 5:
+            if y_predict_p2[15] > 0.05:
+                pred_index_p2 = 15
 
         # print(CHAR[pred_index_park], CHAR[pred_index_p1 + 10], CHAR[pred_index_p2 + 10], CHAR[pred_index_p3], CHAR[pred_index_p4])
 
-        parking = 'P' + CHAR[pred_index_park_lhs] + CHAR[pred_index_park_rhs] + ' '
-        plate = CHAR[pred_index_p1 + 10] + CHAR[pred_index_p2 + 10] + CHAR[pred_index_p3] + CHAR[pred_index_p4]
+        parking = 'P' + constants.CHAR[pred_index_park_lhs] + constants.CHAR[pred_index_park_rhs] + ' '
+        plate = constants.CHAR[pred_index_p1 + 10] + constants.CHAR[pred_index_p2 + 10] + constants.CHAR[pred_index_p3] + constants.CHAR[pred_index_p4]
         # print(parking)
         # print(plate)
 
