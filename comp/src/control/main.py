@@ -1,10 +1,11 @@
 import cv2
 import gym
 import math
-import rospy
 import roslaunch
 import time
 import numpy as np
+import rospy
+from geometry_msgs.msg import Twist
 
 from cv_bridge import CvBridge, CvBridgeError
 from gym import utils, spaces
@@ -14,14 +15,15 @@ from std_srvs.srv import Empty
 from sensor_msgs.msg import Image
 
 import constants
-import detection.crosswalk
 import detection.path
+import detection.crosswalk
 # from detection.pedestrian import Detect_Pedestrian
 # my_detect_pedestrian = Detect_Pedestrian()
 
 class Control(object):
 
     def __init__(self):
+
         # would probably be the same for all classes
         print("initialized success")
         
@@ -44,8 +46,15 @@ class Control(object):
         # Create the subscriber
         rospy.Subscriber("rrbot/camera1/image_raw",Image,self.callback)
 
+        # Set up robot motion
+        self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=2)
+        self.rate = rospy.Rate(5)
+        self.move = Twist()
+
+        # Set initial conditions
         self.detected_crosswalk = False
         self.detected_pedestrian = False
+
         # For saving images purposes
         # self.savedImage = False
         # self.count_loop_save = 0
@@ -60,11 +69,6 @@ class Control(object):
         # self.mean = (123.68, 116.78, 103.94)
         # self.net = cv2.dnn.readNet("/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/frozen_east_text_detection.pb")
         # self.layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
-
-        # Set up robot motion
-        # self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=2)
-        # self.rate = rospy.Rate(5)
-        # self.move = Twist()
 
     def callback(self,data):
 
@@ -89,14 +93,19 @@ class Control(object):
 
     def main(self, raw_cap, gr_cap):
 
-        # print(gr_cap[int(constants.W/4), int(constants.H/2)])
-        # print(gr_cap[int(constants.W/2), constants.H - 1])
-        # print(gr_cap[int(constants.W/3), constants.H - 1])
+        # Get current state
+        self.state = detection.path.detect(gr_cap)
+        print(self.state)
 
-        # cv2.circle(gr_cap, (int(constants.W/3), constants.H - 1), 20, (255,255,0), 2) 
+        # Update velocity
+        detection.path.get_vel(self.move, self.state)
+        # vel = path.get_vel(self.detected_state)
+        # move.linear.x = vel[0]
+        # move.angular.z = vel[1]
 
-        self.detected_state = detection.path.detect(gr_cap)
-        print(self.detected_state)
+        # Publish twist commands
+        self.pub.publish(self.move)
+        self.rate.sleep()
 
         if not (self.detected_crosswalk or self.detected_pedestrian) and detection.crosswalk.detect(raw_cap):
             print("Crosswalk!!")

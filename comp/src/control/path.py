@@ -25,24 +25,8 @@ def detect(img):
     	state.append(-1)
 
     if(np.sum(state_sum[3:6]) > SEC_LIM):
-        state.append(2 - np.argmax(state_sum[3:6]))
+        state.append(np.argmax(state_sum[3:6])+3)
     else:
     	state.append(-1)
 
     return state
-
-
-BASE_VEL = 3
-SCALE_VEL = 1
-
-SCALE_ANG = 1
-CONST_ANG = 2
-
-def get_vel(move, state):
-
-	if(not sum(state) is -2):
-		move.linear.x = BASE_VEL - abs(state[1]-state[0])*SCALE_VEL
-		move.angular.z = (state[1]-state[0])*SCALE_ANG
-	else:
-		move.linear.x = 0
-		move.angular.z = CONST_ANG
