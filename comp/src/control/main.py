@@ -8,6 +8,10 @@ import rospy
 import time
 from geometry_msgs.msg import Twist
 
+import sys
+import numpy
+numpy.set_printoptions(threshold=sys.maxsize)
+
 from cv_bridge import CvBridge, CvBridgeError
 from gym import utils, spaces
 from geometry_msgs.msg import Twist
@@ -16,6 +20,7 @@ from std_srvs.srv import Empty
 from sensor_msgs.msg import Image
 
 import constants
+import pid
 import detection.path
 import detection.crosswalk
 # from detection.pedestrian import Detect_Pedestrian
@@ -45,14 +50,16 @@ class Control(object):
         # self.flann = cv2.FlannBasedMatcher(index_params, search_params)
 
         # Create the subscriber
-        rospy.Subscriber("rrbot/camera1/image_raw",Image,self.callback)
+        rospy.Subscriber("rrbot/camera1/image_raw", Image, self.callback, queue_size=1)
+        # rospy.Subscriber("rrbot/camera1/image_raw", Image, self.callback, queue_size = 1)
 
         # Create the publisher 
         self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-        self.rate = rospy.Rate(1)
+        # self.rate = rospy.Rate(1)
         self.move = Twist()
 
         # Set initial conditions
+        # self.corner = False
         self.detected_crosswalk = False
         self.detected_pedestrian = False
 
@@ -74,13 +81,14 @@ class Control(object):
     def callback(self,data):
 
         try:
-            print("trying to capture frame")
+            # print("trying to capture frame")
             raw_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
             gr_cap = self.bridge.imgmsg_to_cv2(data, "mono8")
 
             if self.first_run:
                 # #getting properties of video
                 frame_shape = raw_cap.shape
+                print(frame_shape)
                 self.frame_height = frame_shape[0]
                 self.frame_width = frame_shape[1]
                 # print(frame_shape)   
@@ -95,24 +103,37 @@ class Control(object):
     def main(self, raw_cap, gr_cap):
 
 
-        # t1 = time.time()
-        # Get current state
-        self.state = detection.path.detect(gr_cap)
-        print(self.state)
-        # t2 = time.time()
-        # print("Detect state: " + str(t2-t1))
+        # # t1 = time.time()
+        # # # Get current state
+        self.state = detection.path.state(gr_cap)
 
-        # t3 = time.time()
-        # Update velocity
-        detection.path.get_vel(self.move, self.state)
-        # t4 = time.time()
-        # print("Get velocity: " + str(t4-t3))
+        # if(not self.corner):
+        #     self.corner = detection.path.corner(gr_cap)
+
+        print(self.state)
+        pid.update(self.move, self.state)
+        # else:
+        #     # if(True):
+        #         # self.count -=1
+        #     # else:
+        #     #     self.count = 3
+        #     self.move.angular.z = 1
+        #     self.move.linear.x = 0
+            
+
+        # # t2 = time.time()
+        # # print("Detect state: " + str(t2-t1))
+
+        # # t3 = time.time()
+        # # # Update velocity
+        # # t4 = time.time()
+        # # print("Get velocity: " + str(t4-t3))
 
 
         # t5 = time.time()
         # Publish twist commands
         self.pub.publish(self.move)
-        self.rate.sleep()
+        # self.rate.sleep()
         # t6 = time.time()
         # print("Publish: " + str(t6-t5))
 
@@ -125,9 +146,22 @@ class Control(object):
         # #         print("Stop!!")
         # #         self.detected_crosswalk = False
         # #         self.detected_pedestrian = True
+
+        # print(int(constants.W*10/21))
+        # print(int(constants.H*18/25))
+        # print(int(constants.W*11/21))
+        # print(int(constants.H*19/25))
+
+        # gr_cap = cv2.rectangle(gr_cap, (int(constants.W*10/21),int(constants.H*18/25)), (int(constants.W*11/21),int(constants.H*19/25)), (255,0,0), 2) 
     
+        # img_sample = gr_cap[int(constants.H*18/25):int(constants.H*19/25),int(constants.W*10/21):int(constants.W*11/21)]
+
+
+        # t1 = time.time()
         cv2.imshow("robot cap", gr_cap)
         cv2.waitKey(1)
+        # t2 = time.time()
+        # print(str(t2-t1))
        
 if __name__ == "__main__":
     rospy.init_node('control', anonymous=True)
