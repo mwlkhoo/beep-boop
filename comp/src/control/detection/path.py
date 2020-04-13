@@ -15,25 +15,25 @@ def detect(img):
     # Determine states
     state = []
 
-    t1 = time.time()
-    state_sum = [0, 0, 0, 0, 0, 0]
+    # t1 = time.time()
+    # state_sum = [0, 0, 0, 0, 0, 0]
     
-    for incr in np.arange(0, 6):
-        for i in range(constants.path_init_H, constants.H):
-            for j in range(SECS[incr], SECS[incr + 1]):
-                if img[i, j] > BW_LIM:
-                    state_sum[incr] += 1
+    # for incr in np.arange(0, 6):
+    #     for i in range(constants.path_init_H, constants.H):
+    #         for j in range(SECS[incr], SECS[incr + 1]):
+    #             if img[i, j] > BW_LIM:
+    #                 state_sum[incr] += 1
 
-    print(state_sum)
-    t2 = time.time()
-    print("State sum (loops): " + str(t2-t1))
+    # print(state_sum)
+    # t2 = time.time()
+    # print("State sum (loops): " + str(t2-t1))
 
 
-    t3 = time.time()
+    # t3 = time.time()
     state_sum = [sum([1 for dim in img[constants.path_init_H:2:, SECS[incr]:2:SECS[incr + 1]] for pix in dim if pix > BW_LIM/2]) for incr in range(0,6)]
     # print(state_sum)
-    t4 = time.time()
-    print("List comprehension: " + str(t4-t3))
+    # t4 = time.time()
+    # print("List comprehension: " + str(t4-t3))
 
 
 
