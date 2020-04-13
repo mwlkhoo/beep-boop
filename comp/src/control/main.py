@@ -5,6 +5,7 @@ import roslaunch
 import time
 import numpy as np
 import rospy
+import time
 from geometry_msgs.msg import Twist
 
 from cv_bridge import CvBridge, CvBridgeError
@@ -46,9 +47,9 @@ class Control(object):
         # Create the subscriber
         rospy.Subscriber("rrbot/camera1/image_raw",Image,self.callback)
 
-        # Set up robot motion
-        self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=2)
-        self.rate = rospy.Rate(5)
+        # Create the publisher 
+        self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        self.rate = rospy.Rate(1)
         self.move = Twist()
 
         # Set initial conditions
@@ -93,29 +94,37 @@ class Control(object):
 
     def main(self, raw_cap, gr_cap):
 
+
+        # t1 = time.time()
         # Get current state
         self.state = detection.path.detect(gr_cap)
         print(self.state)
+        # t2 = time.time()
+        # print("Detect state: " + str(t2-t1))
 
+        # t3 = time.time()
         # Update velocity
         detection.path.get_vel(self.move, self.state)
-        # vel = path.get_vel(self.detected_state)
-        # move.linear.x = vel[0]
-        # move.angular.z = vel[1]
+        # t4 = time.time()
+        # print("Get velocity: " + str(t4-t3))
 
+
+        # t5 = time.time()
         # Publish twist commands
         self.pub.publish(self.move)
         self.rate.sleep()
+        # t6 = time.time()
+        # print("Publish: " + str(t6-t5))
 
-        if not (self.detected_crosswalk or self.detected_pedestrian) and detection.crosswalk.detect(raw_cap):
-            print("Crosswalk!!")
-            self.detected_crosswalk = True
+        # if not (self.detected_crosswalk or self.detected_pedestrian) and detection.crosswalk.detect(raw_cap):
+        #     print("Crosswalk!!")
+        #     self.detected_crosswalk = True
 
-        # if self.detected_crosswalk:
-        #     if my_detect_pedestrian.detect(raw_cap):
-        #         print("Stop!!")
-        #         self.detected_crosswalk = False
-        #         self.detected_pedestrian = True
+        # # if self.detected_crosswalk:
+        # #     if my_detect_pedestrian.detect(raw_cap):
+        # #         print("Stop!!")
+        # #         self.detected_crosswalk = False
+        # #         self.detected_pedestrian = True
     
         cv2.imshow("robot cap", gr_cap)
         cv2.waitKey(1)
