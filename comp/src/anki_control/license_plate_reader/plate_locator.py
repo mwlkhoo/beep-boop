@@ -37,6 +37,7 @@ class Plate_Locator(object):
     def __init__(self):
         
         self.result_file = open('result_file.txt', 'w')
+        self.result_set = set()
         self.first_run = True
         self.allDone = False
 
@@ -185,7 +186,7 @@ class Plate_Locator(object):
                     find_both = False
 
                     for i in range (num_boxes):
-                        print(abs(boxes[parking][0] - boxes[i][0]))
+                        # print(abs(boxes[parking][0] - boxes[i][0]))
                         if minX > boxes[i][0] and abs(boxes[parking][0] - boxes[i][0]) < 20:
                             find_both = True
                             # print("got in here!")
@@ -360,7 +361,7 @@ class Plate_Locator(object):
                             self.savedImage = True
                             self.count_loop_save = 0
                             self.count_loop = 0
-                            self.numSavedImages += 1
+                            # self.numSavedImages += 1
 
                             # cv2.imshow("this would be saved as parking", parking_image)
                             cv2.imwrite('parking.png', parking_image)
@@ -372,9 +373,17 @@ class Plate_Locator(object):
 
                             start_reading_time = time.time()
                             result = my_plate_reader.main()
+
+                            # append the result to the set
+                            parking_num = result[0]
+                            self.result_set.add(parking_num)
+                            # print(self.result_set)
+                            self.numSavedImages = len(self.result_set)
+                            # print(self.numSavedImages)
                             # print("this is the time taken to read the characters")
                             # print(time.time() - start_reading_time)
                     #         # print(result)
+                            # still write the result to the file even though it has already been written
                             self.result_file.write(''.join(result))
                             self.result_file.write('\n')
 
@@ -399,7 +408,7 @@ class Plate_Locator(object):
             self.count_loop += 1
             self.count_detect_mode += 1
 
-            if self.count_loop > 70:
+            if self.count_loop > 50:
                 self.savedImage = False
                 self.count_loop = 0
     

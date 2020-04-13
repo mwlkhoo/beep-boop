@@ -199,13 +199,17 @@ class Plate_Reader(object):
 
         # Plate Reading Correction
         # start_correcting_time = time.time()
-        # correct '1' to '4' if '4' is higher than 0.03: 
-        if pred_index_park_rhs == 1 and y_predict_park_rhs[4] > 0.03:
+        # correct '1' to '4' if '4' is higher than 0.0001: 
+        if pred_index_park_rhs == 1 and y_predict_park_rhs[4] > 0.00001:
             pred_index_park_rhs = 4
-        if pred_index_p3 == 1 and y_predict_p3[4] > 0.03:
+        if pred_index_p3 == 1 and y_predict_p3[4] > 0.00001:
             pred_index_p3 = 4
-        if pred_index_p4 == 1 and y_predict_p4[4] > 0.03:
+        if pred_index_p4 == 1 and y_predict_p4[4] > 0.00001:
             pred_index_p4 = 4
+
+        # correct '5' to '6' if the difference is less than 0.005:
+        if pred_index_park_rhs == 5 and y_predict_park_rhs[5] - y_predict_park_rhs[6] < 0.005:
+            pred_index_park_rhs = 6
 
         # correcting 'T' to 'I' if '1' is high and 'I' is high
         if pred_index_p1 == 19:
@@ -227,15 +231,25 @@ class Plate_Reader(object):
         if pred_index_p4 == 7 and y_predict_p4[31] > 0.1:
             pred_index_p4 = 9
 
-        # correcting 'Z' to '2'
-        if y_predict_park_rhs[35] > 0.9:
+        # correcting '7' to '2' if 'Z' is > 0.95 and '2' is > 0.00001
+        if pred_index_park_rhs == 7 and y_predict_park_rhs[35] > 0.95 and y_predict_park_rhs[2] > 0.00001:
             pred_index_park_rhs = 2
 
-        # correcting '7' to '2' if 'Z' is > 0.95
-        if y_predict_p3[35] > 0.95:
+        # correcting 'Z' to '2' if '7' is not chosen and if 'Z' is > 0.99
+        if pred_index_park_rhs != 7 and y_predict_park_rhs[35] > 0.99:
+            pred_index_park_rhs = 2
+
+        # correcting '7' to '2' if 'Z' is > 0.95 and '2' is > 0.00001
+        if y_predict_p3[35] > 0.99 or y_predict_p3[2] > 0.00001:
             pred_index_p3 = 2
-        if y_predict_p4[35] > 0.95:
+        if y_predict_p4[35] > 0.99 or y_predict_p4[2] > 0.00001:
             pred_index_p4 = 2
+
+        # correcting anything to 'S' if '5' is higher than 0.99:
+        if y_predict_p1[5] > 0.99:
+            pred_index_p1 = 18
+        if y_predict_p2[5] > 0.99:
+            pred_index_p2 = 18
 
         # correcting '5' to 'S' only if 'E' is less than e-5 and is chosen
         if pred_index_p1 == 4 and y_predict_p1[14] < 0.00001:
@@ -247,24 +261,30 @@ class Plate_Reader(object):
 
         # correcting 'F' to 'E' if 'E' is really likely and '5' is really likely
         if pred_index_p1 == 5:    # 'F'
-            if y_predict_p1[14] > 0.0001 and y_predict_p1[5] > 0.9:
+            if y_predict_p1[14] > 0.0001 and y_predict_p1[5] > 0.5:
                 pred_index_p1 = 4
         if pred_index_p2 == 5:    # 'F'
-            if y_predict_p2[14] > 0.0001 and y_predict_p2[5] > 0.9:
+            if y_predict_p2[14] > 0.0001 and y_predict_p2[5] > 0.5:
                 pred_index_p2 = 4
 
-        # correting 'F' to 'P' if 'P' is higher than e^-7
+        # correting 'F' to 'P' if 'P' is higher than e^-7 only if 'R' is less than 'P'. otherwise change it to 'R'
         if pred_index_p1 == 5:
             if y_predict_p1[25] > 0.0000001:
-                pred_index_p1 = 15
+                if y_predict_p1[25] > y_predict_p1[27]:
+                    pred_index_p1 = 15
+                else:
+                    pred_index_p1 = 17
         if pred_index_p2 == 5:
             if y_predict_p2[25] > 0.0000001:
-                pred_index_p2 = 15
+                if y_predict_p2[25] > y_predict_p2[27]:
+                    pred_index_p2 = 15
+                else:
+                    pred_index_p2 = 17
 
-        # if 'F', 'N' and V' are higher than 0.1, it is very likely that it actually is 'H'
-        if (y_predict_p1[15] > 0.1 or y_predict_p1[23] > 0.1) and (y_predict_p1[31] > 0.1 or y_predict_p1[17] > 0.1):   # F or N and V or H
+        # if 'F', 'N' and V' are higher than 0.08, it is very likely that it actually is 'H'
+        if (y_predict_p1[15] > 0.08 or y_predict_p1[23] > 0.08) and (y_predict_p1[31] > 0.08 or y_predict_p1[17] > 0.08):   # F or N and V or H
             pred_index_p1 = 7
-        if (y_predict_p2[15] > 0.1 or y_predict_p2[23] > 0.1) and (y_predict_p2[31] > 0.1 or y_predict_p2[17] > 0.1):   # F or N and V or H
+        if (y_predict_p2[15] > 0.08 or y_predict_p2[23] > 0.08) and (y_predict_p2[31] > 0.08 or y_predict_p2[17] > 0.08):   # F or N and V or H
             pred_index_p2 = 7
 
         # if 'V' and 'H' are both > 0.2, 'H' is more likely to be correct
@@ -285,15 +305,18 @@ class Plate_Reader(object):
         #     pred_index_p1 = 20
         # if pred_index_p2 == 21 and (y_predict_p2[31] < 0.97 or y_predict_p2[21] > 0.001):
         #     pred_index_p2 = 20
-        # second line: if 'V' is chosen and both '0'and 'O' are higher than 0.001, change to 'O'
+        # second line: if 'V' or 'D' is chosen and both '0'and 'O' are higher than 0.001, change to 'O'
         if pred_index_p1 == 21:
             if y_predict_p1[30] > 0.001:
                 pred_index_p1 = 20
+        if pred_index_p1 == 21 or pred_index_p1 == 3:
             if y_predict_p1[0] > 0.001 and y_predict_p1[24] > 0.001:
                 pred_index_p1 = 14
+
         if pred_index_p2 == 21:
             if y_predict_p2[30] > 0.001:
                 pred_index_p2 = 20
+        if pred_index_p2 == 21 or pred_index_p2 == 3:
             if y_predict_p2[0] > 0.001 and y_predict_p2[24] > 0.001:
                 pred_index_p2 = 14
 
@@ -310,15 +333,15 @@ class Plate_Reader(object):
             pred_index_p2 = 6
 
         # correcting '9' to '0' if 'V' is higher than 0.9 and '0' is higher than 0.001
-        if pred_index_p3 == 9 and y_predict_p3[31] > 0.9 and y_predict_p3[0] > 0.001:
+        if pred_index_p3 == 9 and y_predict_p3[31] > 0.9 and y_predict_p3[0] > 0.0001:
             pred_index_p3 = 0
-        if pred_index_p4 == 9 and y_predict_p4[31] > 0.9 and y_predict_p4[0] > 0.001:
+        if pred_index_p4 == 9 and y_predict_p4[31] > 0.9 and y_predict_p4[0] > 0.0001:
             pred_index_p4 = 0
 
         # correcting '9' to '8' if the difference between them is smaller than 0.003
-        if pred_index_p3 == 9 and (y_predict_p3[9] - y_predict_p3[8]) < 0.003:
+        if pred_index_p3 == 9 and float((y_predict_p3[9] - y_predict_p3[8])) / float(y_predict_p3[8]) < 10:
             pred_index_p3 = 8
-        if pred_index_p4 == 9 and (y_predict_p4[9] - y_predict_p4[8]) < 0.003:
+        if pred_index_p4 == 9 and float((y_predict_p4[9] - y_predict_p4[8])) / float(y_predict_p4[8]) < 10:
             pred_index_p4 = 8
 
         # correcting 'V' to 'B' if '8' is higher than e-04 and 'B' is higher than 0.001
@@ -326,6 +349,12 @@ class Plate_Reader(object):
             pred_index_p1 = 1
         if pred_index_p2 == 21 and y_predict_p2[8] > 0.00001 and y_predict_p2[11] > 0.001:
             pred_index_p2 = 1
+
+        # correcting 'V' to 'D' if 'D' is higher than 0.1:
+        if pred_index_p1 == 21 and y_predict_p1[13] > 0.01:
+            pred_index_p1 = 3
+        if pred_index_p2 == 21 and y_predict_p2[13] > 0.01:
+            pred_index_p2 = 3
 
         # print("time taken to correct characters")
         # print(time.time() - start_correcting_time)
