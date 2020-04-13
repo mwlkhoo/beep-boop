@@ -14,7 +14,7 @@ def detect(img):
 			# Recall raw_img is BGR
 			if pix[2] > 245 and pix[1] < 175 and pix[0] < 175:
 				curr_row_sum += 1
-		if(prev_row_sum + curr_row_sum> constants.ROW_LIM):
+		if(prev_row_sum + curr_row_sum > constants.ROW_LIM):
 			return True
 		prev_row_sum = curr_row_sum
 		curr_row_sum = 0

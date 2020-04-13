@@ -22,7 +22,6 @@ class Control(object):
 
     def __init__(self):
         # would probably be the same for all classes
-        print("initialized success")
         
         self.allDone = False
         self.first_run = True
@@ -40,6 +39,7 @@ class Control(object):
         # self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=2)
         # self.rate = rospy.Rate(5)
         # self.move = Twist()
+        print("initialized success")
 
         # Set up in-simulation timer
         ready = raw_input("Ready? > ")
@@ -53,8 +53,8 @@ class Control(object):
     def callback(self,data):
 
         try:
-
-            time_elapsed = rospy.get_time() - self.time_start
+            if not self.allDone:
+                time_elapsed = rospy.get_time() - self.time_start
 
             if time_elapsed < 240 and not self.allDone:
                 print("trying to capture frame")
@@ -71,6 +71,7 @@ class Control(object):
                 self.main(robot_cap)
 
             else:
+                self.allDone = True
                 self.time_elapsed = time_elapsed
                 print("All Done! Stopping simulation and timer...")
                 # shut down callback
