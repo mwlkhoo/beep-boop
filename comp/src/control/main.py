@@ -107,7 +107,6 @@ class Control(object):
                 # shut down callback
                 rospy.on_shutdown(self.shut_down_hook)
 
-
         except CvBridgeError as e:
             print(e)
 

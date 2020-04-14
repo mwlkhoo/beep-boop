@@ -99,7 +99,7 @@ class Control(object):
 
     def main(self, raw_cap, gr_cap):
 
-        print(detection.path.corner(gr_cap))
+        print(detection.crosswalk.detect(raw_cap))
 
         self.move.linear.x = 0
         self.move.angular.z = 0
