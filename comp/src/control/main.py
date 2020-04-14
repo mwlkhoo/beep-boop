@@ -23,8 +23,8 @@ import constants
 import pid
 import detection.path
 import detection.crosswalk
-# from detection.pedestrian import Detect_Pedestrian
-# my_detect_pedestrian = Detect_Pedestrian()
+from detection.pedestrian import Detect_Pedestrian
+my_detect_pedestrian = Detect_Pedestrian()
 
 class Control(object):
 
@@ -38,31 +38,18 @@ class Control(object):
         # Set up image reader
         self.bridge = CvBridge()
 
-        # # Set up SIFT model
-        # self.ped_front = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/detection/pedestrian_front.png')
-        # self.ped_front = cv2.cvtColor(self.ped_front, cv2.COLOR_BGR2RGB)
-
-        # self.sift = cv2.xfeatures2d.SIFT_create()
-        # self.kp_image, self.desc_image = self.sift.detectAndCompute(self.ped_front, None)
-
-        # index_params = dict(algorithm=0, trees=5)
-        # search_params = dict()
-        # self.flann = cv2.FlannBasedMatcher(index_params, search_params)
-
         # Create the subscriber
-        rospy.Subscriber("rrbot/camera1/image_raw", Image, self.callback, queue_size=1)
-        # rospy.Subscriber("rrbot/camera1/image_raw", Image, self.callback, queue_size = 1)
+        rospy.Subscriber("rrbot/camera1/image_raw", Image, self.callback, queue_size = 1)
 
         # Create the publisher 
         self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-        # self.rate = rospy.Rate(1)
         self.move = Twist()
 
         # Set initial conditions
-        # self.corner = False
+        self.allDone = False    
         self.detected_crosswalk = False
         self.detected_pedestrian = False
-        self.count = 0
+        self.loopcount = 0
 
         # For saving images purposes
         # self.savedImage = False
@@ -70,104 +57,90 @@ class Control(object):
         # self.count_loop = 0
         # self.numSavedImages = 0
 
-        # Desired shape
-        # self.desired_w = 480
-        # self.desired_h = 640
-        # self.d_dim = (self.desired_w, self.desired_h)
-
-        # self.mean = (123.68, 116.78, 103.94)
-        # self.net = cv2.dnn.readNet("/home/fizzer/enph353_git/beep-boop/comp/src/license_plate_reader/frozen_east_text_detection.pb")
-        # self.layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
+        # Set up in-simulation timer    
+        ready = raw_input("Ready? > ")  
+        if ready == 'Ready':    
+            print("Ready!") 
+            self.time_elapsed = 0   
+            self.time_start = rospy.get_time()  
+            rospy.Subscriber("rrbot/camera1/image_raw",Image,self.callback)
 
     def callback(self,data):
 
-        try:
-            # print("trying to capture frame")
-            raw_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
-            gr_cap = self.bridge.imgmsg_to_cv2(data, "mono8")
+        try:    
+            if not self.allDone:    
+                time_elapsed = rospy.get_time() - self.time_start   
+            if time_elapsed < 240 and not self.allDone: 
+                print("trying to capture frame")    
+                raw_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
+                gr_cap = self.bridge.imgmsg_to_cv2(data, "mono8")
 
-            if self.first_run:
-                # #getting properties of video
-                frame_shape = raw_cap.shape
-                print(frame_shape)
-                self.frame_height = frame_shape[0]
-                self.frame_width = frame_shape[1]
-                # print(frame_shape)   
-                self.first_run = False  
+                if self.first_run:
+                    # getting properties of video
+                    frame_shape = raw_cap.shape
+                    print(frame_shape)
+                    self.frame_height = frame_shape[0]
+                    self.frame_width = frame_shape[1]
+                    # print(frame_shape)   
+                    self.first_run = False  
 
-            self.main(raw_cap, gr_cap)
-            
+                self.main(raw_cap, gr_cap)
+
 
         except CvBridgeError as e:
             print(e)
 
+    def shut_down_hook(self):   
+        print("Elapsed time in seconds:")   
+        print(self.time_elapsed)    
+
     def main(self, raw_cap, gr_cap):
 
-
-        # # t1 = time.time()
-        # # # Get current state]
-        crosswalk = detection.crosswalk.detect(raw_cap)
+        # Get crosswalk
+        self.detected_crosswalk = detection.crosswalk.detect(raw_cap)
         if (crosswalk):
             print("CROSSWALK! " + str(self.count))
             self.count += 1
-        # if (crosswalk[1]):
-        #     print("INSIDE CROSSWALK!")
-        state = detection.path.state(gr_cap, crosswalk)
+
+        # Update loop count
+        self.loopcount += 1   
+            
+        # Check pedestrian
+        if not (self.detected_crosswalk or self.detected_pedestrian):   
+            if self.loopcount > 30: 
+                self.loopcount = 0  
+                if detection.crosswalk.detect(raw_cap): 
+                    print("Crosswalk!!")    
+                    self.detected_crosswalk = True
+
+        if self.detected_crosswalk: 
+            if my_detect_pedestrian.detect(raw_img):    
+                print("Stop!!") 
+                self.detected_crosswalk = False 
+                self.detected_pedestrian = True 
+                # ask bot to stop for 3 seconds 
+                # change the state back to False
+
+        # Get path state
+        state = detection.path.state(gr_cap, self.detected_crosswalk)
         print(state)
 
-        # if(not self.corner):
-        #     self.corner = detection.path.corner(gr_cap)
-
-        # print(self.state)
+        # Get/set velocities
         pid.update(self.move, state)
-        # else:
-        #     # if(True):
-        #         # self.count -=1
-        #     # else:
-        #     #     self.count = 3
-        #     self.move.angular.z = 1
-        #     self.move.linear.x = 0
-            
-
-        # # t2 = time.time()
-        # # print("Detect state: " + str(t2-t1))
-
-        # # t3 = time.time()
-        # # # Update velocity
-        # # t4 = time.time()
-        # # print("Get velocity: " + str(t4-t3))
-
-
-        # t5 = time.time()
-        # Publish twist commands
         self.pub.publish(self.move)
-        # self.rate.sleep()
-        # t6 = time.time()
-        # print("Publish: " + str(t6-t5))
-
-        # if not (self.detected_crosswalk or self.detected_pedestrian) and detection.crosswalk.detect(raw_cap):
-        #     print("Crosswalk!!")
-        #     self.detected_crosswalk = True
-
-        # # if self.detected_crosswalk:
-        # #     if my_detect_pedestrian.detect(raw_cap):
-        # #         print("Stop!!")
-        # #         self.detected_crosswalk = False
 
         gr_cap = cv2.rectangle(gr_cap, (int(constants.W*2/5),int(constants.H*4/5)), (int(constants.W*3/5),int(constants.H)), (255,0,0), 2) 
     
         # img_sample = gr_cap[int(constants.H*18/25):int(constants.H*19/25),int(constants.W*10/21):int(constants.W*11/21)]
 
-
-        # t1 = time.time()
         cv2.imshow("robot cap", gr_cap)
         cv2.waitKey(1)
-        # t2 = time.time()
-        # print(str(t2-t1))
+
        
 if __name__ == "__main__":
     rospy.init_node('control', anonymous=True)
     my_control = Control()
 
-    # spin() simply keeps python from exiting until this node is stopped
-    rospy.spin()
+    while not rospy.is_shutdown():#
+        # spin() simply keeps python from exiting until this node is stopped
+        rospy.spin()

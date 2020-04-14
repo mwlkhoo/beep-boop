@@ -1,9 +1,6 @@
 import cv2
 import numpy as np
 
-K_TURN = 1
-K_DRIVE = 1
-
 class Detect_Pedestrian(object):
 
     def __init__(self):
@@ -11,9 +8,9 @@ class Detect_Pedestrian(object):
         # self.bridge = CvBridge()
 
         # Set up SIFT model
-        self.ped_front = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/control/detection/pedestrian_front.png')
+        self.ped_front = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/detection/pedestrian_front.png')
         # self.ped_front = cv2.cvtColor(ped_front_bgr, cv2.COLOR_BGR2RGB)
-        self.ped_back = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/control/detection/pedestrian_back.png')
+        self.ped_back = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/detection/pedestrian_back.png')
         # self.ped_back = cv2.cvtColor(ped_back_bgr, cv2.COLOR_BGR2RGB)
 
         self.sift = cv2.xfeatures2d.SIFT_create()
@@ -50,7 +47,7 @@ class Detect_Pedestrian(object):
             print("this is back")
             print(good_points_back)
 
-        if len(good_points_front) > 5 or len(good_points_back) > 5:      
+        if len(good_points_front) > 2 or len(good_points_back) > 2:      
             print("Pedestrian is crossing!!")
             return True
 
