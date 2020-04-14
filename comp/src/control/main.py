@@ -90,6 +90,12 @@ class Control(object):
 
                 self.main(raw_cap, gr_cap)
 
+            else:
+                self.allDone = True
+                self.time_elapsed = time_elapsed
+                print("All Done! Stopping simulation and timer...")
+                # shut down callback
+                rospy.on_shutdown(self.shut_down_hook)
 
         except CvBridgeError as e:
             print(e)
