@@ -7,11 +7,15 @@ class Detect_Pedestrian(object):
         # Set up image reader
         # self.bridge = CvBridge()
 
+        # # Set up SIFT model
+        # self.ped_front = cv2.imread('/home/fizzer/beep-boop/comp/src/anki_control/detection/pedestrian_front.png')
+        # # self.ped_front = cv2.cvtColor(ped_front_bgr, cv2.COLOR_BGR2RGB)
+        # self.ped_back = cv2.imread('/home/fizzer/beep-boop/comp/src/anki_control/detection/pedestrian_back.png')
+        # # self.ped_back = cv2.cvtColor(ped_back_bgr, cv2.COLOR_BGR2RGB)
+
         # Set up SIFT model
-        self.ped_front = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/detection/pedestrian_front.png')
-        # self.ped_front = cv2.cvtColor(ped_front_bgr, cv2.COLOR_BGR2RGB)
-        self.ped_back = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/detection/pedestrian_back.png')
-        # self.ped_back = cv2.cvtColor(ped_back_bgr, cv2.COLOR_BGR2RGB)
+        self.ped_front = cv2.imread('detection/pedestrian_front.png')
+        self.ped_back = cv2.imread('detection/pedestrian_back.png')
 
         self.sift = cv2.xfeatures2d.SIFT_create()
         self.kp_image_front, self.desc_image_front = self.sift.detectAndCompute(self.ped_front, None)

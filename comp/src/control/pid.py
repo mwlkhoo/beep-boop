@@ -14,7 +14,7 @@ SCALE_ANG = 0.05*P_ANG*P
 CONST_ANG = 0.2*P_ANG*P
 
 def update(move, state):
-
+    
     if(not sum(state[0:1]) is -2):
         move.linear.x = BASE_VEL - abs(state[1]-state[0])*SCALE_VEL
         move.angular.z = (state[1]-state[0])*SCALE_ANG
