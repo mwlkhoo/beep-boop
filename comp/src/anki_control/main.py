@@ -1,71 +1,117 @@
 import cv2
+import gym
+import math
+import rospy
+import roslaunch
+import time
 import numpy as np
 import sys
 
-import anki_vector as av
-from anki_vector.util import degrees
+from cv_bridge import CvBridge, CvBridgeError
+from gym import utils, spaces
+from geometry_msgs.msg import Twist
+from std_srvs.srv import Empty
+
+from sensor_msgs.msg import Image
 
 import constants
-import detect
-import path_following
+import detection.crosswalk
+from detection.pedestrian import Detect_Pedestrian
+my_detect_pedestrian = Detect_Pedestrian()
 
-# Modify the SN to match your robot’s SN
-ANKI_SERIAL = '005040b7'
-ANKI_BEHAVIOR = av.connection.ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY
-
-class Anki(object):
+class Control(object):
 
     def __init__(self):
-        pass
+        # would probably be the same for all classes
+        
+        self.allDone = False
+        self.first_run = True
 
-    def main(self):
+        # Set up image reader
+        self.bridge = CvBridge()
 
-        with av.Robot(serial=ANKI_SERIAL,
-                      behavior_control_level=ANKI_BEHAVIOR) as robot:
-            print("Running loop", flush=True)
+        # Create the subscriber
 
-            #------ ROBOT STARTUP ------#
-            robot.behavior.set_eye_color(0.42, 1.00)
-            robot.behavior.set_lift_height(1.0, 10.0, 10.0, 0.0, 3)
-            robot.behavior.set_head_angle(degrees(5.0))
-            robot.camera.init_camera_feed()
+        self.detected_crosswalk = False
+        self.detected_pedestrian = False
+        self.loopcount = 0
 
-            ########## PRINT AND GET IMAGES CONTINUOUSLY ############
-            while(True):
-                raw_frame = robot.camera.latest_image.raw_image
-                raw_img = cv2.cvtColor(np.array(robot.camera.latest_image.raw_image), cv2.COLOR_BGR2RGB)
-                gr_img = cv2.cvtColor(np.array(raw_img), cv2.COLOR_BGR2GRAY)
+        # Set up robot motion
+        # self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=2)
+        # self.rate = rospy.Rate(5)
+        # self.move = Twist()
+        print("initialized success")
 
-                ################ PRINT IMG ARRAY ###################
-                # np.set_printoptions(threshold = sys.maxsize)
-                # print(gr_img)
-
-                print(detect.path(gr_img))
-
-                raw_img = cv2.rectangle(raw_img, (0, constants.path_init_H), (constants.W-1, constants.H-1), (255,0,0), 10)
-                cv2.imshow("Anki view", raw_img)
-                k = cv2.waitKey(-1)
-
-            # ########### PRINT AND GET SINGLE IMAGE #################
-            raw_frame = robot.camera.latest_image.raw_image
-            raw_img = cv2.cvtColor(np.array(raw_frame), cv2.COLOR_BGR2RGB)
-            gr_img = cv2.cvtColor(np.array(raw_img), cv2.COLOR_BGR2GRAY)
-            np.set_printoptions(threshold = sys.maxsize)
-
-            # print(g)
-            # cv2.imshow("Anki view", raw_img)
-            # k = cv2.waitKey(-1)
-
-            ############ TEST: PATH FOLLOWING #######################
+        # Set up in-simulation timer
+        ready = raw_input("Ready? > ")
+        if ready == 'Ready':
+            print("Ready!")
+            self.time_elapsed = 0
+            self.time_start = rospy.get_time()
+            rospy.Subscriber("rrbot/camera1/image_raw",Image,self.callback)
 
 
-            ############ TEST: CROSSWALK DETECTION ##################
-            # if(detect.crosswalk(raw_img)):
-            #     robot.behavior.say_text("Crosswalk!")
-
-            # while(True):
-            #     cv2.imshow("Anki view", raw_img)
-            #     k = cv2.waitKey(1)
+    def callback(self,data):
            
+        try:
+            if not self.allDone:
+                time_elapsed = rospy.get_time() - self.time_start
+
+            if time_elapsed < 240 and not self.allDone:
+                print("trying to capture frame")
+                robot_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
+
+                if self.first_run:
+                    # #getting properties of video
+                    frame_shape = robot_cap.shape
+                    self.frame_height = frame_shape[0]
+                    self.frame_width = frame_shape[1]
+                    # print(frame_shape)   
+                    self.first_run = False  
+
+                self.main(robot_cap)
+
+            else:
+                self.allDone = True
+                self.time_elapsed = time_elapsed
+                print("All Done! Stopping simulation and timer...")
+                # shut down callback
+                rospy.on_shutdown(self.shut_down_hook)
+                
+
+        except CvBridgeError as e:
+            print(e)
+
+    def shut_down_hook(self):
+        print("Elapsed time in seconds:")
+        print(self.time_elapsed) 
+
+    def main(self, robot_cap):
+
+        raw_img = robot_cap
+        self.loopcount += 1
+        
+        if not (self.detected_crosswalk or self.detected_pedestrian):
+            if self.loopcount > 30:
+                self.loopcount = 0
+                if detection.crosswalk.detect(raw_img):
+                    print("Crosswalk!!")
+                    self.detected_crosswalk = True
+
+        if self.detected_crosswalk:
+            if my_detect_pedestrian.detect(raw_img):
+                print("Stop!!")
+                self.detected_crosswalk = False
+                self.detected_pedestrian = True
+                # ask bot to stop for 3 seconds
+                # change the state back to False
+        
+        cv2.imshow("robot cap", raw_img)
+        cv2.waitKey(5)
+       
 if __name__ == "__main__":
-    Anki().main()
+    rospy.init_node('control', anonymous=True)
+    my_control = Control()
+
+    while not rospy.is_shutdown():# spin() simply keeps python from exiting until this node is stopped
+        rospy.spin()
