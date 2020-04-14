@@ -51,12 +51,20 @@ class Control(object):
 
         self.detected_crosswalk = False
         self.detected_pedestrian = False
-        self.letgo = 0
+        self.canSweepNow = False
+
+        # self.letgo = 0
 
         self.loopcount = 0
         self.no_ped_count = 0
-        self.crossing_count = 0
+        # self.crossing_count = 0
         self.num_CW_detected = 0
+        
+        self.detected_corner = False
+
+        self.state_crossing = False
+
+        self.crosswalk_count = 0
 
         # For saving images purposes
         # self.savedImage = False
@@ -110,7 +118,7 @@ class Control(object):
     # Detect crosswalk & pedestrian
     def crosswalkFunc(self, raw_cap):
 
-        if detection.crosswalk.detect(raw_cap):
+        if detection.crosswalk.detect(raw_cap)[0]:
 
             self.detected_crosswalk = True
             # Stay
@@ -186,14 +194,14 @@ class Control(object):
         print("-----------")
 
         # Get crosswalk
-        # Only check crosswalk every 200 loops after the first one is detected
-        # (bc you want it to start checking right after we get 2 plates, but stop checking as frequently after the first crosswalk)
+       
         if self.num_CW_detected > 0:
-            if self.crossing_count > CROSSING_COUNT_LIM:
-                self.crosswalkFunc(raw_cap)
-            else:
-                self.crossing_count += 1
-
+            if not detection.crosswalk.detect(raw_cap)[0] and not self.canSweepNow:
+                self.canSweepNow = True
+                print("Turning to get the plate!!!")
+                self.move.linear.x = 0
+                self.move.angular.z = pid.CONST_ANG
+         
         else:   # start calling crosswalk detection right the way
             self.crosswalkFunc(raw_cap)       
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -201,18 +209,24 @@ class Control(object):
         state = detection.path.state(gr_cap, self.detected_crosswalk)
         print(state)
 
+        if state == [0, 1]:
+            self.canSweepNow = False
+
         # Get/set velocities only when crosswalk is not present 
-        if not self.detected_crosswalk and not self.detected_pedestrian:
+        if not self.detected_crosswalk and not self.detected_pedestrian and not self.canSweepNow:
             pid.update(self.move, state)
 
         # Publish the state anytime
         self.pub.publish(self.move)
 
-        # gr_cap = cv2.rectangle(gr_cap, (int(constants.W*2/5),int(constants.H*4/5)), (int(constants.W*3/5),int(constants.H)), (255,0,0), 2) 
-        # img_sample = gr_cap[int(constants.H*18/25):int(constants.H*19/25),int(constants.W*10/21):int(constants.W*11/21)]
 
         cv2.imshow("robot cap", gr_cap)
         cv2.waitKey(1)
+
+
+        # gr_cap = cv2.rectangle(gr_cap, (int(constants.W*2/5),int(constants.H*4/5)), (int(constants.W*3/5),int(constants.H)), (255,0,0), 2) 
+        # img_sample = gr_cap[int(constants.H*18/25):int(constants.H*19/25),int(constants.W*10/21):int(constants.W*11/21)]
+
 
        
 if __name__ == "__main__":
