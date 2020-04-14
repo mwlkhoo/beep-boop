@@ -59,7 +59,7 @@ class Control(object):
         self.no_ped_count = 0
         # self.crossing_count = 0
         self.num_CW_detected = 0
-        
+
         self.detected_corner = False
 
         self.state_crossing = False
@@ -144,7 +144,7 @@ class Control(object):
                 if self.no_ped_count == NO_PED_COUNT_LIM:
                     self.detected_pedestrian = False
                     self.detected_crosswalk = False
-                    self.crossing_count = 0
+                    # self.crossing_count = 0
                     self.no_ped_count = 0
                     self.num_CW_detected += 1
 
@@ -187,7 +187,7 @@ class Control(object):
 
         # Update loop count 
         print(self.num_CW_detected)
-        print(self.crossing_count)
+        # print(self.crossing_count)
         print(self.no_ped_count)
         print(self.detected_crosswalk)
         print(self.detected_pedestrian)
@@ -211,6 +211,7 @@ class Control(object):
 
         if state == [0, 1]:
             self.canSweepNow = False
+            print("Stop sweeping now")
 
         # Get/set velocities only when crosswalk is not present 
         if not self.detected_crosswalk and not self.detected_pedestrian and not self.canSweepNow:
