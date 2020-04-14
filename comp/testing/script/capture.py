@@ -13,16 +13,17 @@ ANKI_BEHAVIOR = av.connection.ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY
 
 class Detect(object):
 
-    def __init__(self):
+    # def __init__(self):
 
-        # self.robot = av.Robot(serial=ANKI_SERIAL,
-        #                   behavior_control_level=ANKI_BEHAVIOR)
-        # print("robot init success")
+    #     # self.robot = av.Robot(serial=ANKI_SERIAL,
+    #     #                   behavior_control_level=ANKI_BEHAVIOR)
+    #     # print("robot init success")
 
-        # self.robot.camera.init_camera_feed()
-        # print("camera init success", flush=True)
+    #     # self.robot.camera.init_camera_feed()
+    #     # print("camera init success", flush=True)
+    #     pass
 
-    # def main(self):
+    def main(self):
 
         with av.Robot(serial=ANKI_SERIAL,
                       behavior_control_level=ANKI_BEHAVIOR) as robot:
@@ -48,12 +49,12 @@ class Detect(object):
                 robot_cap = robot.camera.latest_image.raw_image
                 print("frame captured", flush=True)
 
-                # frame = cv2.cvtColor(np.array(robot_cap), cv2.COLOR_BGR2GRAY)
+                frame = cv2.cvtColor(np.array(robot_cap), cv2.COLOR_BGR2RGB)
                 # frame_w = frame.shape[1]
                 # print("color to gray", flush=True)
                 # cv2.imshow("Raw img", frame)
-                cv2.imshow("capture", robot_cap)
-                k = cv2.waitKey(3)
+                cv2.imshow("capture", frame)
+                cv2.waitKey(5)
 
                 # kp_grayframe, desc_grayframe = self.sift.detectAndCompute(frame, None)
                 # matches = self.flann.knnMatch(self.desc_image, desc_grayframe, k=2)
