@@ -50,10 +50,11 @@ class Control(object):
 
         self.detected_crosswalk = False
         self.detected_pedestrian = False
+        self.detected_corner = False
 
-        self.loopcount = 0
-        self.wait_count = 0
-        self.crossing_count = 0
+        self.state_crossing = False
+
+        self.crosswalk_count = 0
 
         # For saving images purposes
         # self.savedImage = False
@@ -99,38 +100,64 @@ class Control(object):
 
     def main(self, raw_cap, gr_cap):
 
-        # Update loop count
-        self.loopcount += 1  
-        print(self.crossing_count)
-
-        # Get crosswalk
-        if self.crossing_count > CROSSING_COUNT_LIM:
-            self.detected_crosswalk = detection.crosswalk.detect(raw_cap)
-            if self.detected_crosswalk:
-                if not self.wait_count is WAIT_COUNT_LIM:
-                    print("CROSSWALK!")
-                    # Stay
-                    self.move.linear.x = 0
-                    self.move.angular.z = 0
-                    # Check for pedestrian
-                    self.detected_pedestrian = my_detect_pedestrian.detect(raw_cap)
-                    if self.detected_pedestrian:   
-                        self.wait_count = 0 
-                        print("Stop!!") 
-                    else: 
-                        self.wait_count += 1
-                        # self.detected_crosswalk = False 
-                        # self.detected_pedestrian = True 
-                        # ask bot to stop for 3 seconds 
-                        # change the state back to False
-                else: 
-                    self.crossing_count = 0
-        else:
-            self.crossing_count += 1
+        # Check state
+        self.detected_corner = detection.path.corner(gr_cap)
+        self.detected_crosswalk = detection.crosswalk.detect(raw_cap)
+        state = detection.path.state(gr_cap, self.detected_crosswalk)
+        print(state)
 
 
-        
+        # if not state_crossing:
+        #     if self.detected_crosswalk:
+        #         state_crossing = True
+        #     else:   
+        #         # NORMAL OPERATION
 
+
+        # else:
+        #     if not self.detected_corner:
+        #         state_crossing = False
+
+
+
+
+        # # Update loop count
+        # self.loopcount += 1  
+        # print(self.crossing_count)
+
+
+        if self.detected_crosswalk[0]:
+            print("CROSSWALK CLOSE")
+        if self.detected_crosswalk[1]:
+            print("CROSSWALK FAR")
+        # if detection.crosswalk.inside(raw_cap):
+
+            # print("INSIDE")
+
+        # # Get crosswalk
+        # if self.crossing_count > CROSSING_COUNT_LIM:
+        #     self.detected_crosswalk = detection.crosswalk.detect(raw_cap)
+        #     if self.detected_crosswalk:
+        #         if not self.wait_count is WAIT_COUNT_LIM:
+        #             print("CROSSWALK!")
+        #             # Stay
+        #             self.move.linear.x = 0
+        #             self.move.angular.z = 0
+        #             # Check for pedestrian
+        #             self.detected_pedestrian = my_detect_pedestrian.detect(raw_cap)
+        #             if self.detected_pedestrian:   
+        #                 self.wait_count = 0 
+        #                 print("Stop!!") 
+        #             else: 
+        #                 self.wait_count += 1
+        #                 # self.detected_crosswalk = False 
+        #                 # self.detected_pedestrian = True 
+        #                 # ask bot to stop for 3 seconds 
+        #                 # change the state back to False
+        #         else: 
+        #             self.crossing_count = 0
+        # else:
+        #     self.crossing_count += 1
             
         # # Check pedestrian
         # if not (self.detected_crosswalk or self.detected_pedestrian):   
@@ -148,14 +175,15 @@ class Control(object):
         #         # ask bot to stop for 3 seconds 
         #         # change the state back to False
 
-        # Get path state
-        state = detection.path.state(gr_cap, self.detected_crosswalk)
-        print(state)
+        
 
-        # Get/set velocities
-        if not self.detected_crosswalk or self.wait_count is WAIT_COUNT_LIM:
-            pid.update(self.move, state)
-            self.wait_count = 0
+        # # Get/set velocities
+        # if not self.detected_crosswalk or self.wait_count is WAIT_COUNT_LIM:
+        #     pid.update(self.move, state)
+        #     self.wait_count = 0
+        # self.pub.publish(self.move)
+
+        pid.update(self.move, state)
         self.pub.publish(self.move)
 
         # gr_cap = cv2.rectangle(gr_cap, (int(constants.W*2/5),int(constants.H*4/5)), (int(constants.W*3/5),int(constants.H)), (255,0,0), 2) 
