@@ -11,7 +11,7 @@ SEC_LIM = 4000/9
 # Edge sections have width of 106 px, middle sections have width of 107 px
 SECS = [0, 106, 213, 320, 427, 534, 640]
 
-def state(img):
+def state(img, crosswalk):
 
     # Determine states
     state = []
@@ -53,6 +53,9 @@ def state(img):
     # print("State (if-else's): " + str(t2-t1))
 
     # Check if end of path
+
+    if crosswalk:
+        state[0] -= 1
     
     return state
 

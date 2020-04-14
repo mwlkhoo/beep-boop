@@ -62,6 +62,7 @@ class Control(object):
         # self.corner = False
         self.detected_crosswalk = False
         self.detected_pedestrian = False
+        self.count = 0
 
         # For saving images purposes
         # self.savedImage = False
@@ -104,14 +105,21 @@ class Control(object):
 
 
         # # t1 = time.time()
-        # # # Get current state
-        self.state = detection.path.state(gr_cap)
+        # # # Get current state]
+        crosswalk = detection.crosswalk.detect(raw_cap)
+        if (crosswalk):
+            print("CROSSWALK! " + str(self.count))
+            self.count += 1
+        # if (crosswalk[1]):
+        #     print("INSIDE CROSSWALK!")
+        state = detection.path.state(gr_cap, crosswalk)
+        print(state)
 
         # if(not self.corner):
         #     self.corner = detection.path.corner(gr_cap)
 
-        print(self.state)
-        pid.update(self.move, self.state)
+        # print(self.state)
+        pid.update(self.move, state)
         # else:
         #     # if(True):
         #         # self.count -=1
@@ -145,14 +153,8 @@ class Control(object):
         # #     if my_detect_pedestrian.detect(raw_cap):
         # #         print("Stop!!")
         # #         self.detected_crosswalk = False
-        # #         self.detected_pedestrian = True
 
-        # print(int(constants.W*10/21))
-        # print(int(constants.H*18/25))
-        # print(int(constants.W*11/21))
-        # print(int(constants.H*19/25))
-
-        # gr_cap = cv2.rectangle(gr_cap, (int(constants.W*10/21),int(constants.H*18/25)), (int(constants.W*11/21),int(constants.H*19/25)), (255,0,0), 2) 
+        gr_cap = cv2.rectangle(gr_cap, (int(constants.W*2/5),int(constants.H*4/5)), (int(constants.W*3/5),int(constants.H)), (255,0,0), 2) 
     
         # img_sample = gr_cap[int(constants.H*18/25):int(constants.H*19/25),int(constants.W*10/21):int(constants.W*11/21)]
 
