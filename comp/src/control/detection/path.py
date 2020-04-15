@@ -29,16 +29,17 @@ def state(img, crosswalk):
         state.append(-1)
 
     if crosswalk[1]:
-        state[0] -= 1
+        state[0] -= 0.4
     
     return state
 
-CORNER_LIM = 225
+CORNER_LIM = 120    # was 225 before
 
 def corner(img):
 
     img_sample = img[375:415:2,int(constants.W*10/21):int(constants.W*11/21):2]
-
+    print("printing corner sum")
+    print(sum([1 for dim in img_sample for pix in dim if pix > BW_LIM]))
     return sum([1 for dim in img_sample for pix in dim if pix > BW_LIM]) > CORNER_LIM
 
 # # Check horixontal line along middle for NO white pix
