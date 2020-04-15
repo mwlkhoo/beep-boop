@@ -1,14 +1,52 @@
-# Image dimensions
+#---------------  PID ------------------#
+
+# For PID tuning:
+P = 2.6
+P_ANG = 1.5 # was 3.5 before
+
+BASE_VEL = 0.1*P
+SCALE_VEL = 0.04*P
+
+SCALE_ANG = 0.04*P_ANG*P
+CONST_ANG = 0.3*P_ANG*P
+
+
+#------------- GENERAL ----------------#
+
+# Pixel limits:
+R_LIM = 245
+G_LIM = 175
+B_LIM = 175
+BW_LIM = 250
+
+# Image dimensions:
 H = 480
 W = 640
 
-path_init_H = int(H/2)
-path_final_H = H
 
-# for license plate locating
+#------------- DETECTION ----------------#
+
+# For path detection:
+PATH_INIT_H = int(H/2)
+
+# For crosswalk detection:
+CW_SAMPLE_START = 370
+CW_SAMPLE_END = 400
+CW_L = int(W/5)
+CW_R = int(W*4/5)
+
+# For corner detection:
+CORNER_L = int(W*10/21)
+CORNER_R = int(W*11/21)
+
+
+#----------- LICENSE PLATES -------------#
+
+
+# For license plate locating:
 MIN_CONFIDENCE = 0.5
 CROPPING_EDGE_THRESHOLD = 10
 
-# for license plate reading
+# For license plate reading:
 CHAR = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 READING_EDGE_THRESHOLD = 100
