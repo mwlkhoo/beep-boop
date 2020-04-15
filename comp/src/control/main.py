@@ -60,6 +60,7 @@ class Control(object):
         self.passedCW = False
 
         self.detected_corner = False
+        self.foundPlate = False
 
         self.entering_cw = 0
 
@@ -160,6 +161,8 @@ class Control(object):
         print("seen redline this many times: " + str(self.entering_cw))
         print("has it passed crosswalk yet: " + str(self.passedCW))
         print("has it seen corner yet: " + str(self.detected_corner))
+        print("has it found plate yet: " + str(self.foundPlate))
+
         
 
         # Get crosswalk
@@ -180,8 +183,20 @@ class Control(object):
         print(state)
 
         if self.passedCW:
-            if path.corner(gr_cap):
+            if path.corner(gr_cap) and not self.foundPlate:
                 self.detected_corner = True
+
+            if self.detected_corner:
+                print("found corner! now sweeping!!!")
+                self.move.linear.x = 0
+                self.move.angular.z = pid.CONST_ANG
+        
+        if self.detected_corner and state == [0, 1]:
+            print("found plate! stop sweeping")
+            self.foundPlate = True
+            self.detected_corner = False
+
+
 
         # if state == [0, 1]:
         #     self.canSweepNow = False
