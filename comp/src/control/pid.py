@@ -9,6 +9,7 @@ import numpy as np
 
 # P_WALL = 1.2
 
+
 # BASE_VEL = 0.2*P
 # SCALE_VEL = 0.1*P
 
@@ -23,6 +24,7 @@ SCALE_VEL = 0.04*P
 
 SCALE_ANG = 0.04*P_ANG*P
 CONST_ANG = 0.3*P_ANG*P
+
 
 def update(move, state):
 

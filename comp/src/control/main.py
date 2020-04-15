@@ -28,6 +28,7 @@ my_detect_pedestrian = Detect_Pedestrian()
 
 NO_PED_COUNT_LIM = 5
 CROSSING_COUNT_LIM = 8
+
 START_CW_DETECT = 0
 # LET_GO_LIM = 175
 
@@ -110,10 +111,12 @@ class Control(object):
     # Detect crosswalk & pedestrian
     def crosswalkFunc(self, raw_cap):
 
+
         if self.entering_cw > 0 or detection.crosswalk.detect(raw_cap)[0] or self.no_ped_count > 0 or self.detected_pedestrian:
             print("in crosswalkFunc now")
             self.detected_crosswalk[1] = False
             if self.entering_cw > CROSSING_COUNT_LIM:
+
                 self.entering_cw += 1
                 # Stay
                 self.move.linear.x = 0
