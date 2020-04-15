@@ -150,12 +150,13 @@ class Control(object):
         # print(self.num_CW_detected)
         # # print(self.crossing_count)
         # print(self.no_ped_count)
+        print("-----------")
         print("crosswalk: " + str(self.detected_crosswalk))
         print("pedestrian: " str(self.detected_pedestrian))
         print("seen redline this many times: " + str(self.entering_cw))
         print("has it passed crosswalk yet: " + str(self.passedCW))
         print("has it seen corner yet: " + str(self.detected_corner))
-        print("-----------")
+        
 
         # Get crosswalk
        
