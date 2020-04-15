@@ -33,7 +33,7 @@ def update(move, state):
         move.angular.z = (state[1]-state[0])*SCALE_ANG
     else:
         move.linear.x = 0
-        move.angular.z = -1.3*CONST_ANG
+        move.angular.z = -1 *CONST_ANG
 
 # P = 2
 # P_ANG = 2

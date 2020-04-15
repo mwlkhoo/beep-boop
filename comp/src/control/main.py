@@ -30,10 +30,17 @@ my_detect_pedestrian = Detect_Pedestrian()
 from license_plate_reader.plate_locator import Plate_Locator
 my_plate_locator = Plate_Locator()
 
-NO_PED_COUNT_LIM = 5
-CROSSING_COUNT_LIM = 8
-COUNT_DETECT_MODE_LIM = 50
-LOOP_COUNT_LIM = 50
+NO_PED_COUNT_LIM = 3
+CROSSING_COUNT_LIM = 7 # with Kazam, use 7
+RUSHING_FACTOR = 1.4
+COUNT_DETECT_MODE_LIM = 107
+CORRECTED_COUNT_DETECT_MODE_LIM = 250
+LOOP_COUNT_LIM = 107
+CORRECTED_LOOP_COUNT_LIM = 250
+LESS_COUNT_DETECT_MODE_LIM = 80
+LESS_LOOP_COUNT_LIM = 80
+TIME_LIM = 240            # change this to 240
+NO_PLATE_MOVE_ON_LIM = 1
 
 # START_CW_DETECT = 0
 # LET_GO_LIM = 175
@@ -67,13 +74,17 @@ class Control(object):
 
         self.detected_corner = False
         self.foundPlate = False
+        self.stopRushing = False
 
         # Set up plate detection flags
+        self.noPlateCount = 0
         self.loopcount = 0
         self.savedImage = False
-        self.count_detect_mode = 51
+        self.count_detect_mode = COUNT_DETECT_MODE_LIM + 1
         self.count_loop_save = 0
         self.stopForPlate = False
+        self.getBackOut = False
+        self.getBackOut_count = 0
 
 
         print("initialized success")
@@ -92,17 +103,19 @@ class Control(object):
             if not self.allDone:    
                 time_elapsed = rospy.get_time() - self.time_start   
             # TODO: Change this back to 240
-            if time_elapsed < 99999 and not self.allDone: 
+            if not self.allDone and time_elapsed < TIME_LIM: 
                 # print("trying to capture frame")    
                 raw_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
                 gr_cap = self.bridge.imgmsg_to_cv2(data, "mono8")
 
-                if self.first_run:
+                # if self.first_run:
                     # getting properties of video
-                    frame_shape = raw_cap.shape
-                    self.frame_height = frame_shape[0]
-                    self.frame_width = frame_shape[1]
-                    self.first_run = False  
+                    # frame_shape = raw_cap.shape
+                self.frame_height = constants.H  # 480
+                self.frame_width = constants.W   # 640
+                    # print(self.frame_height)
+                    # print(self.frame_width)
+                    # self.first_run = False  
 
                 self.main(raw_cap, gr_cap)
 
@@ -164,7 +177,7 @@ class Control(object):
                 self.entering_cw += 1
                 self.detected_crosswalk[1] = False
 
-        if detection.crosswalk.detect(raw_cap)[1]:
+        if detection.crosswalk.detect(raw_cap)[1] and self.no_ped_count == 0:
             self.detected_crosswalk[1] = True
 
 
@@ -176,7 +189,8 @@ class Control(object):
         # print(self.num_CW_detected)
         # # print(self.crossing_count)
         # print(self.no_ped_count)
-        print("-----------")
+        print("----------------")
+        print("crosswalk stuff:")
         print("crosswalk: " + str(self.detected_crosswalk))
         print("pedestrian: " + str(self.detected_pedestrian))
         print("no ped count:" + str(self.no_ped_count))
@@ -184,6 +198,15 @@ class Control(object):
         print("has it passed crosswalk yet: " + str(self.passedCW))
         print("has it seen corner yet: " + str(self.detected_corner))
         print("has it found plate yet: " + str(self.foundPlate))
+        print("----------------")
+        print("plate stuff:")
+        print("this is count_detect_mode:" + str(self.count_detect_mode))
+        print("this is count_loop_save:" + str(self.count_loop_save))
+        print("has not successfully got a plate for:" + str(self.noPlateCount))
+        print("has it stopped to read plate yet?" + str(self.stopForPlate))
+        print("has image been saved yet?" + str(self.savedImage))
+        print("this many images have been saved:" + str(my_plate_locator.numSavedImages))
+        print("is it getting back out:" + str(self.getBackOut))
 
         if my_plate_locator.numSavedImages > 3:     # can be changed to 4
             self.allDone = True
@@ -205,7 +228,7 @@ class Control(object):
                 state = detection.path.state(gr_cap, self.detected_crosswalk)
 
             else:
-                print("manually change to False False")
+                # print("manually change to False False")
                 state = detection.path.state(gr_cap, [False, False])
 
             print(state)
@@ -215,66 +238,120 @@ class Control(object):
                 self.passedCW_count += 1
                 if self.passedCW_count > 50 and detection.path.corner(gr_cap) and not self.foundPlate:
                     self.detected_corner = True
+                    self.stopRushing = True
 
                 if self.detected_corner:
                     print("found corner! now sweeping!!!")
                     self.move.linear.x = 0
-                    self.move.angular.z = -1.5 * pid.CONST_ANG
+                    self.move.angular.z = -1.1 * pid.CONST_ANG
             
             if self.detected_corner and state == [0, 1]:
                 print("found plate! stop sweeping")
                 self.foundPlate = True
                 self.detected_corner = False
+                self.stopForPlate = True
+                self.count_detect_mode = COUNT_DETECT_MODE_LIM + 1
+                self.move.linear.x = 0
+                self.move.angular.z = 0
 
-
-
+            # getting back out of the bad orientation
+            if self.getBackOut_count == 0 and self.foundPlate and my_plate_locator.numSavedImages == 3:
+                self.move.linear.x = 0
+                self.getBackOut = True
+                self.move.angular.z = 1.2 * pid.CONST_ANG
+                print("getting back out!")
         # if state == [0, 1]:
         #     self.canSweepNow = False
         #     print("Stop sweeping now")
 
         # Get/set velocities only when crosswalk is not present 
-        if not self.stopForPlate and self.entering_cw < CROSSING_COUNT_LIM + 2 and not self.detected_pedestrian and not self.detected_corner:
+        if not self.getBackOut and not self.stopForPlate and self.entering_cw < CROSSING_COUNT_LIM + 2 and not self.detected_pedestrian and not self.detected_corner:
+            print("updating pid")
             pid.update(self.move, state)
 
+        if self.getBackOut and self.getBackOut_count > 6:
+            print("finishing getting back out now")
+            self.getBackOut = False
+            self.move.angular.z = 0
+
+
+        if self.getBackOut:
+            self.getBackOut_count += 1
+
+        # Rush out of crosswalk
+        if self.passedCW and not self.stopRushing:
+            self.move.linear.x *= RUSHING_FACTOR
+            # self.move.angular /= RUSHING_FACTOR
         # Publish the state anytime
         self.pub.publish(self.move)
 
 #------------------------------------------------------------------------------------------------------------------------------------
 
-         # only check for plate if wanted:
-        if not self.savedImage and self.count_detect_mode > COUNT_DETECT_MODE_LIM:
-            
-            self.stopForPlate = True
+        # only check for plate if wanted:
+        if my_plate_locator.numSavedImages == 2 and not self.passedCW:
+            used_count_detect_mode_lim = CORRECTED_COUNT_DETECT_MODE_LIM
+            used_loop_count_lim = CORRECTED_LOOP_COUNT_LIM
+        elif not self.passedCW or self.foundPlate:
+            used_count_detect_mode_lim = COUNT_DETECT_MODE_LIM
+            used_loop_count_lim = LOOP_COUNT_LIM
+        else:
+            used_count_detect_mode_lim = LESS_COUNT_DETECT_MODE_LIM
+            used_loop_count_lim = LESS_LOOP_COUNT_LIM
 
-            # make it stop IMMEDIATELY, it will be too late if wait until method finishes
-            self.move.linear.x = 0
-            self.move.angular.z = 0
-            self.pub.publish(self.move)
+        if (not self.passedCW and not self.detected_pedestrian) or (self.passedCW and self.foundPlate):
 
-            self.count_detect_mode = 0
-            try:
-                print("entered try block!")
+            if not self.savedImage and self.count_detect_mode > used_count_detect_mode_lim:
+                print("checking for plates")
+                if self.noPlateCount < NO_PLATE_MOVE_ON_LIM or self.foundPlate:
 
-                if my_plate_locator.locate_plate(gr_cap, self.count_loop_save):
-                    self.savedImage = True
-                    self.stopForPlate = False   # Resume
-                    self.count_loop_save = 0
-                    self.count_loop = 0
+                    self.stopForPlate = True
+
+                    # make it stop IMMEDIATELY, it will be too late if wait until method finishes
+                    self.move.linear.x = 0
+                    self.move.angular.z = 0
+                    self.pub.publish(self.move)
+
+                    self.count_detect_mode = 0
+
+                    try:
+                        print("entered try block!")
+
+                        if my_plate_locator.locate_plate(gr_cap, self.count_loop_save):
+                            self.savedImage = True
+                            self.stopForPlate = False   # Resume
+                            self.count_loop_save = 0
+                            self.count_loop = 0
+
+                        else:
+                            self.count_loop_save += 1
+                            self.count_detect_mode = used_count_detect_mode_lim + 1
+
+                        if self.count_loop_save > 1:
+                            self.noPlateCount += 1
+                            self.loopcount += 1
+
+                    except (ValueError, UnboundLocalError, IndexError, AttributeError):
+                        print("error caught")
+                        self.noPlateCount += 1
+                        self.loopcount += 1
 
                 else:
-                    self.count_loop_save += 1
-                    self.count_detect_mode = 51
+                    print("could not find plate, move on")
+                    self.stopForPlate = False
+                    self.noPlateCount = 0
+                    self.loopcount = 0
+                    self.count_loop_save = 0
+                    self.count_detect_mode = 0
 
-            except (UnboundLocalError, IndexError, AttributeError):
+            else:
+                print("not checking for plates")
+                self.stopForPlate = False
                 self.loopcount += 1
+                self.count_detect_mode += 1
 
-        else:
-            self.loopcount += 1
-            self.count_detect_mode += 1
-
-            if self.loopcount > LOOP_COUNT_LIM:
-                self.savedImage = False
-                self.loopcount = 0
+                if self.loopcount > used_loop_count_lim:
+                    self.savedImage = False
+                    self.loopcount = 0
 
 
         cv2.imshow("robot cap", gr_cap)

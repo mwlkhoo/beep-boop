@@ -55,8 +55,8 @@ class Plate_Reader(object):
             # getting the saved image (saved in plate_locator.py)
         start_platereader_time = time.time()
 
-        gray_parking = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/control/license_plate_reader/parking.png', cv2.IMREAD_GRAYSCALE)
-        gray_plate = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/control/license_plate_reader/plate.png', cv2.IMREAD_GRAYSCALE)
+        gray_parking = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/control/parking.png', cv2.IMREAD_GRAYSCALE)
+        gray_plate = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/control/plate.png', cv2.IMREAD_GRAYSCALE)
         
         parking_num_raw = cv2.merge((gray_parking, gray_parking, gray_parking))
         plate_num_raw = cv2.merge((gray_plate, gray_plate, gray_plate))
@@ -201,22 +201,33 @@ class Plate_Reader(object):
         # start_correcting_time = time.time()
         # correct '1' to '4' if '4' is higher than 0.0001: 
         if pred_index_park_rhs == 1 and y_predict_park_rhs[4] > 0.00001:
-            pred_index_park_rhs = 4
-        if pred_index_p3 == 1 and y_predict_p3[4] > 0.00001:
-            pred_index_p3 = 4
-        if pred_index_p4 == 1 and y_predict_p4[4] > 0.00001:
-            pred_index_p4 = 4
+            if y_predict_park_rhs[3] < 0.1:
+                pred_index_park_rhs = 4
+            else:
+                pred_index_park_rhs = 3
 
-        # correct '5' to '6' if the difference is less than 0.005:
-        if pred_index_park_rhs == 5 and y_predict_park_rhs[5] - y_predict_park_rhs[6] < 0.005:
+        if pred_index_p3 == 1 and y_predict_p3[4] > 0.00001:
+            if y_predict_p3[3] < 0.1:
+                pred_index_p3 = 4
+            else:
+                pred_index_p3 = 3
+
+        if pred_index_p4 == 1 and y_predict_p4[4] > 0.00001:
+            if y_predict_p4[3] < 0.1:
+                pred_index_p4 = 4
+            else:
+                pred_index_p4 = 3
+
+        # correct '5' to '6' if the difference is small:
+        if pred_index_park_rhs == 5 and (float(y_predict_park_rhs[5] - y_predict_park_rhs[6])/float(y_predict_park_rhs[6]) < 10 or y_predict_park_rhs[6] > 0.1):
             pred_index_park_rhs = 6
 
-        # correcting 'T' to 'I' if '1' is high and 'I' is high
+        # correcting 'T' to 'I' if '1' is high and diff is small (new cond)
         if pred_index_p1 == 19:
-            if np.argmax(y_predict_p1[:10]) == 1 and y_predict_p1[18] > 0.1:
+            if y_predict_p1[1] > 0.9 and float(y_predict_p1[29] - y_predict_p1[18])/float(y_predict_p1[18]) < 10:
                 pred_index_p1 = 8
         if pred_index_p2 == 19:
-            if np.argmax(y_predict_p2[:10]) == 1 and y_predict_p2[18] > 0.1:
+            if y_predict_p2[1] > 0.9 and float(y_predict_p2[29] - y_predict_p2[18])/float(y_predict_p2[18]) < 10:
                 pred_index_p2 = 8
 
         # (need confirmation) correcting '9' to '8' if '9' is chosen and '8' is higher than 0.001:
@@ -239,16 +250,16 @@ class Plate_Reader(object):
         if pred_index_park_rhs != 7 and y_predict_park_rhs[35] > 0.99:
             pred_index_park_rhs = 2
 
-        # correcting '7' to '2' if 'Z' is > 0.95 and '2' is > 0.00001
-        if y_predict_p3[35] > 0.99 or y_predict_p3[2] > 0.00001:
+        # correcting '7' to '2' if 'Z' is > 0.95 and '2' is > 0.00001 (this is a new cond): '7' < e-3
+        if y_predict_p3[35] > 0.99 and (y_predict_p3[2] > 0.00001 or y_predict_p3[7] < 0.001):
             pred_index_p3 = 2
-        if y_predict_p4[35] > 0.99 or y_predict_p4[2] > 0.00001:
+        if y_predict_p4[35] > 0.99 and (y_predict_p4[2] > 0.00001 or y_predict_p4[7] < 0.001):
             pred_index_p4 = 2
 
-        # correcting anything to 'S' if '5' is higher than 0.99:
-        if y_predict_p1[5] > 0.99:
+        # correcting anything to 'S' if '5' is higher than 0.999 (and if 'S' is higher than 0.000001):
+        if y_predict_p1[5] > 0.999: # and y_predict_p1[28] > 0.000001:
             pred_index_p1 = 18
-        if y_predict_p2[5] > 0.99:
+        if y_predict_p2[5] > 0.999: # and y_predict_p2[28] > 0.000001:
             pred_index_p2 = 18
 
         # correcting '5' to 'S' only if 'E' is less than e-5 and is chosen
@@ -267,15 +278,15 @@ class Plate_Reader(object):
             if y_predict_p2[14] > 0.0001 and y_predict_p2[5] > 0.5:
                 pred_index_p2 = 4
 
-        # correting 'F' to 'P' if 'P' is higher than e^-7 only if 'R' is less than 'P'. otherwise change it to 'R'
+        # correting 'F' to 'P' if 'P' is higher than e^-5 (-7) only if 'R' is less than 'P'. otherwise change it to 'R'
         if pred_index_p1 == 5:
-            if y_predict_p1[25] > 0.0000001:
+            if y_predict_p1[25] > 0.00001:
                 if y_predict_p1[25] > y_predict_p1[27]:
                     pred_index_p1 = 15
                 else:
                     pred_index_p1 = 17
         if pred_index_p2 == 5:
-            if y_predict_p2[25] > 0.0000001:
+            if y_predict_p2[25] > 0.00001:
                 if y_predict_p2[25] > y_predict_p2[27]:
                     pred_index_p2 = 15
                 else:
@@ -333,12 +344,17 @@ class Plate_Reader(object):
             pred_index_p2 = 6
 
         # correcting '9' to '0' if 'V' is higher than 0.9 and '0' is higher than 0.001
-        if pred_index_p3 == 9 and y_predict_p3[31] > 0.9 and y_predict_p3[0] > 0.0001:
+        if pred_index_park_rhs == 9 and y_predict_park_rhs[31] > 0.85 and y_predict_park_rhs[0] > 0.0001:
+            pred_index_park_rhs = 0
+        if pred_index_p3 == 9 and y_predict_p3[31] > 0.85 and y_predict_p3[0] > 0.0001:
             pred_index_p3 = 0
-        if pred_index_p4 == 9 and y_predict_p4[31] > 0.9 and y_predict_p4[0] > 0.0001:
+        if pred_index_p4 == 9 and y_predict_p4[31] > 0.85 and y_predict_p4[0] > 0.0001:
             pred_index_p4 = 0
 
+        print(float((y_predict_p4[9] - y_predict_p4[8])) / float(y_predict_p4[8]))
         # correcting '9' to '8' if the difference between them is smaller than 0.003
+        if pred_index_park_rhs == 9 and float((y_predict_park_rhs[9] - y_predict_park_rhs[8])) / float(y_predict_park_rhs[8]) < 10:
+            pred_index_park_rhs = 8
         if pred_index_p3 == 9 and float((y_predict_p3[9] - y_predict_p3[8])) / float(y_predict_p3[8]) < 10:
             pred_index_p3 = 8
         if pred_index_p4 == 9 and float((y_predict_p4[9] - y_predict_p4[8])) / float(y_predict_p4[8]) < 10:
@@ -355,6 +371,12 @@ class Plate_Reader(object):
             pred_index_p1 = 3
         if pred_index_p2 == 21 and y_predict_p2[13] > 0.01:
             pred_index_p2 = 3
+
+        # correcting 'Y' to 'N' if 'N' is more than 0.1:
+        if pred_index_p1 == 24 and y_predict_p1[23] > 0.1:
+            pred_index_p1 = 13
+        if pred_index_p2 == 24 and y_predict_p2[23] > 0.1:
+            pred_index_p2 = 13
 
         # print("time taken to correct characters")
         # print(time.time() - start_correcting_time)

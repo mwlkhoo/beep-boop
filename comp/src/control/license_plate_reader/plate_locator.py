@@ -106,6 +106,8 @@ class Plate_Locator(object):
 
     def locate_plate(self, gr_cap, count_loop_save):   
 
+        # print("Got into locate_plate function")
+
         # print("this many images have been saved / recognized")
         # print(self.numSavedImages)
         # print("has it been saved?")
@@ -122,11 +124,14 @@ class Plate_Locator(object):
 
         
 
-        frame_w = self.frame_width
-        frame_h = self.frame_height
+        frame_w = constants.W
+        frame_h = constants.H
+
+        # print("initialized dimension")
 
         # Working with gray scale image
         frame = cv2.merge((gr_cap, gr_cap, gr_cap))
+        # print("got passed merging")
         # # Make a copy of the frame
         orig = frame.copy()
         orig1 = frame.copy()
@@ -141,6 +146,8 @@ class Plate_Locator(object):
         # start_blob_time = time.time()
         blob = cv2.dnn.blobFromImage(frame, 1.0, self.d_dim, self.mean, swapRB = False, crop = False)
         self.net.setInput(blob)
+
+        # print("got passed blob!")
         # print("this is blob time")
         # print(time.time() - start_blob_time)
 
@@ -149,6 +156,8 @@ class Plate_Locator(object):
         # suppress weak, overlapping bounding boxes
         # start_decode_time = time.time()
         (rects, confidences, mean_angle) = self.decode_predictions(scores, geometry)
+
+        # print("got passed decode!")
         # print("this is decode time")
         # print(time.time() - start_decode_time)
         # print(confidences)
@@ -166,8 +175,10 @@ class Plate_Locator(object):
 
             
         num_boxes = boxes.shape[0]
+
         # print("this is number of boxes")
         # print(num_boxes)
+
         # Find the order of boxes
         if num_boxes > 1:
             for i in range (num_boxes):
