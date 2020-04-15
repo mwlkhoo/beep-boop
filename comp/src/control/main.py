@@ -28,7 +28,7 @@ my_detect_pedestrian = Detect_Pedestrian()
 
 NO_PED_COUNT_LIM = 20
 CROSSING_COUNT_LIM = 300
-START_CW_DETECT = 200
+START_CW_DETECT = 0
 # LET_GO_LIM = 175
 
 class Control(object):
@@ -108,7 +108,7 @@ class Control(object):
     # Detect crosswalk & pedestrian
     def crosswalkFunc(self, raw_cap):
 
-        if detected_crosswalk.detect(raw_cap)[0]:
+        if detection.crosswalk.detect(raw_cap)[0]:
             if self.entering_cw > 0:
                 self.entering_cw += 1
                 # Stay
@@ -142,7 +142,7 @@ class Control(object):
                 self.entering_cw += 1
                 self.detected_crosswalk[1] = False
 
-        if detected_crosswalk.detect(raw_cap)[1]:
+        if detection.crosswalk.detect(raw_cap)[1]:
             self.detected_crosswalk[1] = True
 
         else:
@@ -157,7 +157,7 @@ class Control(object):
         # print(self.no_ped_count)
         print("-----------")
         print("crosswalk: " + str(self.detected_crosswalk))
-        print("pedestrian: " str(self.detected_pedestrian))
+        print("pedestrian: " + str(self.detected_pedestrian))
         print("seen redline this many times: " + str(self.entering_cw))
         print("has it passed crosswalk yet: " + str(self.passedCW))
         print("has it seen corner yet: " + str(self.detected_corner))
@@ -209,6 +209,7 @@ class Control(object):
         # Publish the state anytime
         self.pub.publish(self.move)
 
+        self.loopcount += 1
 
         cv2.imshow("robot cap", gr_cap)
         cv2.waitKey(1)

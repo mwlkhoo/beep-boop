@@ -9,10 +9,10 @@ P_ANG = 3.5
 
 P_WALL = 1.2
 
-BASE_VEL = 0.2*P
+BASE_VEL = 0.1*P
 SCALE_VEL = 0.1*P
 
-SCALE_ANG = 0.14*P_ANG*P
+SCALE_ANG = 0.1*P_ANG*P
 CONST_ANG = 0.4*P_ANG*P
 
 def update(move, state):
