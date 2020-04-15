@@ -30,15 +30,16 @@ my_detect_pedestrian = Detect_Pedestrian()
 from license_plate_reader.plate_locator import Plate_Locator
 my_plate_locator = Plate_Locator()
 
-NO_PED_COUNT_LIM = 3
+NO_PED_COUNT_LIM = 30       # either really small or really big bc of the delay
+AFTER_PED_COUNT_LIM = 2
 CROSSING_COUNT_LIM = 7 # with Kazam, use 7
 RUSHING_FACTOR = 1.4
 COUNT_DETECT_MODE_LIM = 107
 CORRECTED_COUNT_DETECT_MODE_LIM = 250
 LOOP_COUNT_LIM = 107
 CORRECTED_LOOP_COUNT_LIM = 250
-LESS_COUNT_DETECT_MODE_LIM = 80
-LESS_LOOP_COUNT_LIM = 80
+LESS_COUNT_DETECT_MODE_LIM = 160
+LESS_LOOP_COUNT_LIM = 160
 TIME_LIM = 240            # change this to 240
 NO_PLATE_MOVE_ON_LIM = 1
 
@@ -160,11 +161,19 @@ class Control(object):
                     print("----------------")
 
                 else:   # no pedestrian
+                    if not self.detected_pedestrian:
+                        used_no_ped_count_lim = NO_PED_COUNT_LIM
+
+                    else:
+                        used_no_ped_count_lim = AFTER_PED_COUNT_LIM
+
+                    print("using this as no_ped_count_lim:" + str(used_no_ped_count_lim))
+
                     self.no_ped_count += 1
                     print("waiting no pedestrian to stablize")
                         # if no pedestrian for a long time, move on
 
-                    if self.no_ped_count == NO_PED_COUNT_LIM:
+                    if self.no_ped_count == used_no_ped_count_lim:
                         print("now letting bot go bc road is clear")
                         self.detected_pedestrian = False
                         self.detected_crosswalk[0] = False
@@ -174,6 +183,9 @@ class Control(object):
                         self.passedCW = True
 
             else:   # seen redline once, need to see one more time before stopping
+                self.move.angular.z = -0.3* pid.CONST_ANG
+                print("trying to adjust back")
+
                 self.entering_cw += 1
                 self.detected_crosswalk[1] = False
 
@@ -228,7 +240,7 @@ class Control(object):
                 state = detection.path.state(gr_cap, self.detected_crosswalk)
 
             else:
-                # print("manually change to False False")
+                print("manually change to False False")
                 state = detection.path.state(gr_cap, [False, False])
 
             print(state)
@@ -243,7 +255,7 @@ class Control(object):
                 if self.detected_corner:
                     print("found corner! now sweeping!!!")
                     self.move.linear.x = 0
-                    self.move.angular.z = -1.1 * pid.CONST_ANG
+                    self.move.angular.z = -1.3 * pid.CONST_ANG
             
             if self.detected_corner and state == [0, 1]:
                 print("found plate! stop sweeping")
@@ -287,11 +299,18 @@ class Control(object):
 
 #------------------------------------------------------------------------------------------------------------------------------------
 
+        if my_plate_locator.numSavedImages == 2 and self.foundPlate:
+            print("do not move until 3rd plate is found")
+            self.count_detect_mode = COUNT_DETECT_MODE_LIM + 1
+            # self.move.angular.z = -9 * pid.CONST_ANG
+            # self.pub.publish(self.move)
+
+
         # only check for plate if wanted:
         if my_plate_locator.numSavedImages == 2 and not self.passedCW:
             used_count_detect_mode_lim = CORRECTED_COUNT_DETECT_MODE_LIM
             used_loop_count_lim = CORRECTED_LOOP_COUNT_LIM
-        elif not self.passedCW or self.foundPlate:
+        elif (my_plate_locator.numSavedImages == 2 and self.foundPlate) or not self.passedCW:
             used_count_detect_mode_lim = COUNT_DETECT_MODE_LIM
             used_loop_count_lim = LOOP_COUNT_LIM
         else:
