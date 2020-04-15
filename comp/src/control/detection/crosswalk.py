@@ -16,7 +16,7 @@ def detect(img):
 	img_sample_stop = img[constants.CW_SAMPLE_START:constants.CW_SAMPLE_END:STEP,constants.CW_L:constants.CW_R:STEP]
 	rows_stop = img_sample_stop.shape[0]
 
-	img_sample_all = np.vstack([img[constants.PATH_INIT_H:constants.CW_SAMPLE_START:STEP,constants.CW_L:constants.CW_R:STEP], 
+	img_sample_all = np.vstack([img[constants.CW_INIT_H:constants.CW_SAMPLE_START:STEP,constants.CW_L:constants.CW_R:STEP], 
 		img[constants.CW_SAMPLE_END:constants.H:STEP,constants.CW_L:constants.CW_R:STEP]])
 	rows_all = img_sample_all.shape[0]
 
