@@ -144,6 +144,9 @@ class Control(object):
         if detected_crosswalk.detect(raw_cap)[1]:
             self.detected_crosswalk[1] = True
 
+        else:
+            self.detected_crosswalk[1] = False
+
 
     def main(self, raw_cap, gr_cap):
 
