@@ -84,7 +84,7 @@ class Control(object):
                 if self.first_run:
                     # getting properties of video
                     frame_shape = raw_cap.shape
-                    print(frame_shape)
+                    # print(frame_shape)
                     self.frame_height = frame_shape[0]
                     self.frame_width = frame_shape[1]
                     self.first_run = False  
@@ -138,6 +138,10 @@ class Control(object):
 
             else:   # seen redline once, need to see one more time before stopping
                 self.entering_cw += 1
+                self.detected_crosswalk[1] = False
+
+        if detected_crosswalk.detect(raw_cap)[1]:
+            self.detected_crosswalk[1] = True
 
 
     def main(self, raw_cap, gr_cap):
