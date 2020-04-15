@@ -109,6 +109,7 @@ class Control(object):
 
         if detected_crosswalk.detect(raw_cap)[0]:
             if self.entering_cw > 0:
+                self.entering_cw += 1
                 # Stay
                 self.move.linear.x = 0
                 self.move.angular.z = 0
@@ -184,7 +185,7 @@ class Control(object):
         #     print("Stop sweeping now")
 
         # Get/set velocities only when crosswalk is not present 
-        if self.entering_cw == 0 and not self.detected_pedestrian and not self.detected_corner:
+        if self.entering_cw < 2 and not self.detected_pedestrian and not self.detected_corner:
             pid.update(self.move, state)
 
         # Publish the state anytime
