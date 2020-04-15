@@ -28,6 +28,7 @@ my_detect_pedestrian = Detect_Pedestrian()
 
 NO_PED_COUNT_LIM = 20
 CROSSING_COUNT_LIM = 300
+START_CW_DETECT = 200
 # LET_GO_LIM = 175
 
 class Control(object):
@@ -49,28 +50,18 @@ class Control(object):
         # Set initial conditions
         self.allDone = False    
 
-        self.detected_crosswalk = False
+        self.detected_crosswalk = [False, False]
         self.detected_pedestrian = False
         self.canSweepNow = False
-
-        # self.letgo = 0
 
         self.loopcount = 0
         self.no_ped_count = 0
         # self.crossing_count = 0
-        self.num_CW_detected = 0
+        self.passedCW = False
 
         self.detected_corner = False
 
-        self.state_crossing = False
-
-        self.crosswalk_count = 0
-
-        # For saving images purposes
-        # self.savedImage = False
-        # self.count_loop_save = 0
-        # self.count_loop = 0
-        # self.numSavedImages = 0
+        self.entering_cw = 0
 
         # Set up in-simulation timer    
         ready = raw_input("Ready? > ")  
@@ -86,7 +77,7 @@ class Control(object):
             if not self.allDone:    
                 time_elapsed = rospy.get_time() - self.time_start   
             if time_elapsed < 240 and not self.allDone: 
-                print("trying to capture frame")    
+                # print("trying to capture frame")    
                 raw_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
                 gr_cap = self.bridge.imgmsg_to_cv2(data, "mono8")
 
@@ -117,103 +108,84 @@ class Control(object):
     # Detect crosswalk & pedestrian
     def crosswalkFunc(self, raw_cap):
 
-        if detection.crosswalk.detect(raw_cap)[0]:
+        if detected_crosswalk.detect(raw_cap)[0]:
+            if self.entering_cw > 0:
+                # Stay
+                self.move.linear.x = 0
+                self.move.angular.z = 0
+                print("---------------")
+                print("!!!CROSSWALK!!!")
+                print("---------------")
 
-            self.detected_crosswalk = True
-            # Stay
-            self.move.linear.x = 0
-            self.move.angular.z = 0
-            print("---------------")
-            print("!!!CROSSWALK!!!")
-            print("---------------")
+                if my_detect_pedestrian.detect(raw_cap):
 
-            if my_detect_pedestrian.detect(raw_cap):
-
-                self.detected_pedestrian = True
-
-                self.no_ped_count = 0
-
-                print("----------------")
-                print("!!!PEDESTRIAN!!!")
-                print("----------------")
-
-            else:
-                self.no_ped_count += 1
-
-                if self.no_ped_count == NO_PED_COUNT_LIM:
-                    self.detected_pedestrian = False
-                    self.detected_crosswalk = False
-                    # self.crossing_count = 0
+                    self.detected_pedestrian = True
                     self.no_ped_count = 0
-                    self.num_CW_detected += 1
 
-        else:
-            self.detected_crosswalk = False
+                    print("----------------")
+                    print("!!!PEDESTRIAN!!!")
+                    print("----------------")
 
+                else:   # no pedestrian
+                    self.no_ped_count += 1
+                        # if no pedestrian for a long time, move on
 
+                    if self.no_ped_count == NO_PED_COUNT_LIM:
+                        self.detected_pedestrian = False
+                        self.detected_crosswalk = [False, False]
+                        self.no_ped_count = 0
+                        self.entering_cw = 0
+                        self.passedCW = True
 
-        # self.detected_crosswalk = detection.crosswalk.detect(raw_cap)
-
-        # # if crosswalk is detected:
-        # if self.detected_crosswalk and not self.detected_pedestrian:
-        #     print("CROSSWALK!")
-
-        #     if self.no_ped_count < NO_PED_COUNT_LIM:    # wait until pedestrian detection stablizes
-
-        #         # Stay
-        #         self.move.linear.x = 0
-        #         self.move.angular.z = 0
-
-        #         # Check for pedestrian
-        #         self.detected_pedestrian = my_detect_pedestrian.detect(raw_cap)
-        #         if self.detected_pedestrian:    # if pedestrian is present 
-        #             print("PEDESTRIAN!!")
-        #             self.no_ped_count = 0
-        #             self.num_CW_detected += 1   # increment the number cw detected
- 
-
-        #         else:                           # if pedestrian is not present
-        #             self.no_ped_count += 1        # add to the stablizing counter
-
-        #     else:                        # indeed no pedestrian 
-        #         self.crossing_count = 0
-        #         self.no_ped_count = 0 
-        #         self.detected_crosswalk = False    
-        #         self.num_CW_detected += 1   # increment the number cw detected
+            else:   # seen redline once, need to see one more time before stopping
+                self.entering_cw += 1
 
 
     def main(self, raw_cap, gr_cap):
 
         # Update loop count 
-        print(self.num_CW_detected)
-        # print(self.crossing_count)
-        print(self.no_ped_count)
+        # print(self.num_CW_detected)
+        # # print(self.crossing_count)
+        # print(self.no_ped_count)
+        print("crosswalk")
         print(self.detected_crosswalk)
+        print("pedestrian")
         print(self.detected_pedestrian)
+        print("seen redline this many times")
+        print(self.entering_cw)
+        print("has it passed crosswalk yet")
+        print(self.passedCW)
+        print("has it seen corner yet")
+        print(self.detected_corner)
         print("-----------")
 
         # Get crosswalk
        
-        if self.num_CW_detected > 0:
-            if not detection.crosswalk.detect(raw_cap)[0] and not self.canSweepNow:
-                self.canSweepNow = True
-                print("Turning to get the plate!!!")
-                self.move.linear.x = 0
-                self.move.angular.z = pid.CONST_ANG
-         
-        else:   # start calling crosswalk detection right the way
-            self.crosswalkFunc(raw_cap)       
+        if not self.passedCW and self.loopcount > START_CW_DETECT:
+            self.crosswalkFunc(raw_cap)
+            # else:
+            #     self.detected_crosswalk = [False, False]       
 #------------------------------------------------------------------------------------------------------------------------------------
         # Get path state
-        state = detection.path.state(gr_cap, self.detected_crosswalk)
+        if self.entering_cw == 0 and not self.passedCW:
+            state = detection.path.state(gr_cap, self.detected_crosswalk)
+
+        else:
+            print("manually change to False False")
+            state = detection.path.state(gr_cap, [False, False])
+
         print(state)
 
-        if state == [0, 1]:
-            self.canSweepNow = False
-            print("Stop sweeping now")
+        if self.passedCW:
+            if path.corner(gr_cap):
+                self.detected_corner = True
+
+        # if state == [0, 1]:
+        #     self.canSweepNow = False
+        #     print("Stop sweeping now")
 
         # Get/set velocities only when crosswalk is not present 
-        if not self.detected_crosswalk and not self.detected_pedestrian and not self.canSweepNow:
+        if self.entering_cw == 0 and not self.detected_pedestrian and not self.detected_corner:
             pid.update(self.move, state)
 
         # Publish the state anytime
