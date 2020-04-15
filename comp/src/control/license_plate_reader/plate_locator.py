@@ -29,6 +29,7 @@ from std_srvs.srv import Empty
 
 from sensor_msgs.msg import Image
 import sys
+import os
 # sys.path.insert(1, '/home/fizzer/enph353_git/beep-boop/comp/src/anki_control')
 import constants
 
@@ -52,7 +53,7 @@ class Plate_Locator(object):
         self.real_plate_w = 400          # actual: 80
 
         self.mean = (123.68, 116.78, 103.94)
-        self.net = cv2.dnn.readNet("/home/fizzer/enph353_git/beep-boop/comp/src/control/license_plate_reader/frozen_east_text_detection.pb")
+        self.net = cv2.dnn.readNet(os.path.join(os.path.realpath('..'), 'control/license_plate_reader/frozen_east_text_detection.pb'))
         self.layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
 
         # Set up image reader
