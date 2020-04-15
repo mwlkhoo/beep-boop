@@ -15,7 +15,7 @@ from keras import models
 from keras import optimizers
 
 import sys
-sys.path.insert(1, '/home/fizzer/enph353_git/beep-boop/comp/src/anki_control')
+sys.path.insert(1, '/home/fizzer/enph353_git/beep-boop/comp/src/control')
 import constants
 # BW_THRESHOLD = 80
 # PLATE_BW_THRESHOLD =50
@@ -39,13 +39,13 @@ class Plate_Reader(object):
         keras.backend.set_session(self.session)
 
          # load the trained model
-        json_file = open('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/license_plate_reader/blur_license_plate_model.json', 'r')
+        json_file = open('/home/fizzer/enph353_git/beep-boop/comp/src/control/license_plate_reader/blur_license_plate_model.json', 'r')
         loaded_model_json = json_file.read()
         json_file.close()
         self.loaded_model = model_from_json(loaded_model_json)
 
         # load weights into new model
-        self.loaded_model.load_weights('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/license_plate_reader/blur_license_plate_model.h5')
+        self.loaded_model.load_weights('/home/fizzer/enph353_git/beep-boop/comp/src/control/license_plate_reader/blur_license_plate_model.h5')
         print("Loaded model from disk")
         self.loaded_model._make_predict_function()
 
@@ -55,8 +55,8 @@ class Plate_Reader(object):
             # getting the saved image (saved in plate_locator.py)
         start_platereader_time = time.time()
 
-        gray_parking = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/license_plate_reader/parking.png', cv2.IMREAD_GRAYSCALE)
-        gray_plate = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/anki_control/license_plate_reader/plate.png', cv2.IMREAD_GRAYSCALE)
+        gray_parking = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/control/license_plate_reader/parking.png', cv2.IMREAD_GRAYSCALE)
+        gray_plate = cv2.imread('/home/fizzer/enph353_git/beep-boop/comp/src/control/license_plate_reader/plate.png', cv2.IMREAD_GRAYSCALE)
         
         parking_num_raw = cv2.merge((gray_parking, gray_parking, gray_parking))
         plate_num_raw = cv2.merge((gray_plate, gray_plate, gray_plate))

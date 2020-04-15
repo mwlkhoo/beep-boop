@@ -5,7 +5,6 @@ import roslaunch
 import time
 import numpy as np
 import rospy
-import time
 from geometry_msgs.msg import Twist
 
 import sys
@@ -26,19 +25,26 @@ import detection.crosswalk
 from detection.pedestrian import Detect_Pedestrian
 my_detect_pedestrian = Detect_Pedestrian()
 
+
+# sys.path.insert(1, '/home/fizzer/enph353_git/beep-boop/comp/src/anki_control')
+from license_plate_reader.plate_locator import Plate_Locator
+my_plate_locator = Plate_Locator()
+
 NO_PED_COUNT_LIM = 5
 CROSSING_COUNT_LIM = 8
+COUNT_DETECT_MODE_LIM = 50
+LOOP_COUNT_LIM = 50
 
-START_CW_DETECT = 0
+# START_CW_DETECT = 0
 # LET_GO_LIM = 175
 
 class Control(object):
 
     def __init__(self):
 
-        # # would probably be the same for all classes
-        # print("initialized success")
-        
+        # Set initial conditions
+        self.allDone = False   
+        self.doneEarly = False
         self.first_run = True
 
         # Set up image reader
@@ -48,24 +54,29 @@ class Control(object):
         self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.move = Twist()
 
-        # Set initial conditions
-        self.allDone = False    
-
+ 
+        # Set up crosswalk flags
         self.detected_crosswalk = [False, False]
         self.detected_pedestrian = False
         self.canSweepNow = False
 
-        self.loopcount = 0
         self.no_ped_count = 0
-        # self.crossing_count = 0
         self.passedCW = False
-
         self.passedCW_count = 0
+        self.entering_cw = 0
 
         self.detected_corner = False
         self.foundPlate = False
 
-        self.entering_cw = 0
+        # Set up plate detection flags
+        self.loopcount = 0
+        self.savedImage = False
+        self.count_detect_mode = 51
+        self.count_loop_save = 0
+        self.stopForPlate = False
+
+
+        print("initialized success")
 
         # Set up in-simulation timer    
         ready = raw_input("Ready? > ")  
@@ -80,6 +91,7 @@ class Control(object):
         try:    
             if not self.allDone:    
                 time_elapsed = rospy.get_time() - self.time_start   
+            # TODO: Change this back to 240
             if time_elapsed < 99999 and not self.allDone: 
                 # print("trying to capture frame")    
                 raw_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
@@ -88,7 +100,6 @@ class Control(object):
                 if self.first_run:
                     # getting properties of video
                     frame_shape = raw_cap.shape
-                    # print(frame_shape)
                     self.frame_height = frame_shape[0]
                     self.frame_width = frame_shape[1]
                     self.first_run = False  
@@ -97,7 +108,8 @@ class Control(object):
 
             else:
                 self.allDone = True
-                self.time_elapsed = time_elapsed
+                if not self.doneEarly:
+                    self.time_elapsed = time_elapsed
                 print("All Done! Stopping simulation and timer...")
                 # shut down callback
                 rospy.on_shutdown(self.shut_down_hook)
@@ -173,40 +185,46 @@ class Control(object):
         print("has it seen corner yet: " + str(self.detected_corner))
         print("has it found plate yet: " + str(self.foundPlate))
 
-        
+        if my_plate_locator.numSavedImages > 3:     # can be changed to 4
+            self.allDone = True
+            self.doneEarly = True
+            self.time_elapsed = rospy.get_time() - self.time_start
 
+        # !!!!!!! ONLY do these when not in the process of stopping and reading plate.
         # Get crosswalk
-       
-        if not self.passedCW and self.loopcount > START_CW_DETECT:
-            self.crosswalkFunc(raw_cap)
-            # else:
-            #     self.detected_crosswalk = [False, False]       
-#------------------------------------------------------------------------------------------------------------------------------------
-        # Get path state
-        if self.entering_cw == 0 and not self.passedCW:
-            state = detection.path.state(gr_cap, self.detected_crosswalk)
+        # Only start crosswalk detection after at least 2 plates have been saved
+        if not self.stopForPlate:
+            
+            if my_plate_locator.numSavedImages > 1 and not self.passedCW:
+                self.crosswalkFunc(raw_cap)
+                # else:
+                #     self.detected_crosswalk = [False, False]    
 
-        else:
-            print("manually change to False False")
-            state = detection.path.state(gr_cap, [False, False])
+            # Get path state
+            if self.entering_cw == 0 and not self.passedCW:
+                state = detection.path.state(gr_cap, self.detected_crosswalk)
 
-        print(state)
+            else:
+                print("manually change to False False")
+                state = detection.path.state(gr_cap, [False, False])
 
-        if self.passedCW:
-            print(self.passedCW_count)
-            self.passedCW_count += 1
-            if self.passedCW_count > 50 and detection.path.corner(gr_cap) and not self.foundPlate:
-                self.detected_corner = True
+            print(state)
 
-            if self.detected_corner:
-                print("found corner! now sweeping!!!")
-                self.move.linear.x = 0
-                self.move.angular.z = -1.3 * pid.CONST_ANG
-        
-        if self.detected_corner and state == [0, 1]:
-            print("found plate! stop sweeping")
-            self.foundPlate = True
-            self.detected_corner = False
+            if self.passedCW:
+                print(self.passedCW_count)
+                self.passedCW_count += 1
+                if self.passedCW_count > 50 and detection.path.corner(gr_cap) and not self.foundPlate:
+                    self.detected_corner = True
+
+                if self.detected_corner:
+                    print("found corner! now sweeping!!!")
+                    self.move.linear.x = 0
+                    self.move.angular.z = -1.5 * pid.CONST_ANG
+            
+            if self.detected_corner and state == [0, 1]:
+                print("found plate! stop sweeping")
+                self.foundPlate = True
+                self.detected_corner = False
 
 
 
@@ -215,13 +233,49 @@ class Control(object):
         #     print("Stop sweeping now")
 
         # Get/set velocities only when crosswalk is not present 
-        if self.entering_cw < CROSSING_COUNT_LIM + 2 and not self.detected_pedestrian and not self.detected_corner:
+        if not self.stopForPlate and self.entering_cw < CROSSING_COUNT_LIM + 2 and not self.detected_pedestrian and not self.detected_corner:
             pid.update(self.move, state)
 
         # Publish the state anytime
         self.pub.publish(self.move)
 
-        self.loopcount += 1
+#------------------------------------------------------------------------------------------------------------------------------------
+
+         # only check for plate if wanted:
+        if not self.savedImage and self.count_detect_mode > COUNT_DETECT_MODE_LIM:
+            
+            self.stopForPlate = True
+
+            # make it stop IMMEDIATELY, it will be too late if wait until method finishes
+            self.move.linear.x = 0
+            self.move.angular.z = 0
+            self.pub.publish(self.move)
+
+            self.count_detect_mode = 0
+            try:
+                print("entered try block!")
+
+                if my_plate_locator.locate_plate(gr_cap, self.count_loop_save):
+                    self.savedImage = True
+                    self.stopForPlate = False   # Resume
+                    self.count_loop_save = 0
+                    self.count_loop = 0
+
+                else:
+                    self.count_loop_save += 1
+                    self.count_detect_mode = 51
+
+            except (UnboundLocalError, IndexError, AttributeError):
+                self.loopcount += 1
+
+        else:
+            self.loopcount += 1
+            self.count_detect_mode += 1
+
+            if self.loopcount > LOOP_COUNT_LIM:
+                self.savedImage = False
+                self.loopcount = 0
+
 
         cv2.imshow("robot cap", gr_cap)
         cv2.waitKey(1)
