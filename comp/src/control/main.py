@@ -102,8 +102,7 @@ class Control(object):
             print(e)
 
     def shut_down_hook(self):   
-        print("Elapsed time in seconds:")   
-        print(self.time_elapsed)    
+        print("Elapsed time in seconds:" + str(self.time_elapsed))
 
     # Detect crosswalk & pedestrian
     def crosswalkFunc(self, raw_cap):
@@ -147,16 +146,11 @@ class Control(object):
         # print(self.num_CW_detected)
         # # print(self.crossing_count)
         # print(self.no_ped_count)
-        print("crosswalk")
-        print(self.detected_crosswalk)
-        print("pedestrian")
-        print(self.detected_pedestrian)
-        print("seen redline this many times")
-        print(self.entering_cw)
-        print("has it passed crosswalk yet")
-        print(self.passedCW)
-        print("has it seen corner yet")
-        print(self.detected_corner)
+        print("crosswalk: " + str(self.detected_crosswalk))
+        print("pedestrian: " str(self.detected_pedestrian))
+        print("seen redline this many times: " + str(self.entering_cw))
+        print("has it passed crosswalk yet: " + str(self.passedCW))
+        print("has it seen corner yet: " + str(self.detected_corner))
         print("-----------")
 
         # Get crosswalk
