@@ -28,7 +28,7 @@ def state(img, crosswalk):
         state.append(-1)
 
     if crosswalk[1]:
-        state[0] -= 0.3
+        state[0] -= 0.08
     
     return state
 

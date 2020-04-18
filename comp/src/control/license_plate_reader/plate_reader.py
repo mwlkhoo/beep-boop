@@ -54,10 +54,12 @@ class Plate_Reader(object):
         # change to anki's camera later
         # while(True):
             # getting the saved image (saved in plate_locator.py)
-        start_platereader_time = time.time()
+        # start_platereader_time = time.time()
 
-        gray_parking = cv2.imread('../parking.png', cv2.IMREAD_GRAYSCALE)
-        gray_plate = cv2.imread('../plate.png', cv2.IMREAD_GRAYSCALE)
+        gray_parking = cv2.imread('../control/parking.png', cv2.IMREAD_GRAYSCALE)
+        gray_plate = cv2.imread('../control/plate.png', cv2.IMREAD_GRAYSCALE)
+
+        # print(gray_parking)
         
         parking_num_raw = cv2.merge((gray_parking, gray_parking, gray_parking))
         plate_num_raw = cv2.merge((gray_plate, gray_plate, gray_plate))

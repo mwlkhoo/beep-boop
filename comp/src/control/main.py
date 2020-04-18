@@ -30,13 +30,13 @@ my_detect_pedestrian = Detect_Pedestrian()
 from license_plate_reader.plate_locator import Plate_Locator
 my_plate_locator = Plate_Locator()
 
-NO_PED_COUNT_LIM = 30       # either really small or really big bc of the delay
-AFTER_PED_COUNT_LIM = 2
+NO_PED_COUNT_LIM = 25       # either really small or really big bc of the delay
+AFTER_PED_COUNT_LIM = 5
 CROSSING_COUNT_LIM = 7 # with Kazam, use 7
 RUSHING_FACTOR = 1.4
-COUNT_DETECT_MODE_LIM = 107
+COUNT_DETECT_MODE_LIM = 100
 CORRECTED_COUNT_DETECT_MODE_LIM = 250
-LOOP_COUNT_LIM = 107
+LOOP_COUNT_LIM = 100
 CORRECTED_LOOP_COUNT_LIM = 250
 LESS_COUNT_DETECT_MODE_LIM = 160
 LESS_LOOP_COUNT_LIM = 160
@@ -183,7 +183,7 @@ class Control(object):
                         self.passedCW = True
 
             else:   # seen redline once, need to see one more time before stopping
-                self.move.angular.z = -0.3* pid.CONST_ANG
+                self.move.angular.z = -0.3* constants.CONST_ANG
                 print("trying to adjust back")
 
                 self.entering_cw += 1
@@ -255,7 +255,7 @@ class Control(object):
                 if self.detected_corner:
                     print("found corner! now sweeping!!!")
                     self.move.linear.x = 0
-                    self.move.angular.z = -1.3 * pid.CONST_ANG
+                    self.move.angular.z = -1.3 * constants.CONST_ANG
             
             if self.detected_corner and state == [0, 1]:
                 print("found plate! stop sweeping")
@@ -270,7 +270,7 @@ class Control(object):
             if self.getBackOut_count == 0 and self.foundPlate and my_plate_locator.numSavedImages == 3:
                 self.move.linear.x = 0
                 self.getBackOut = True
-                self.move.angular.z = 1.2 * pid.CONST_ANG
+                self.move.angular.z = 1.2 * constants.CONST_ANG
                 print("getting back out!")
         # if state == [0, 1]:
         #     self.canSweepNow = False
