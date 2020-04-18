@@ -19,7 +19,7 @@ from std_srvs.srv import Empty
 
 from sensor_msgs.msg import Image
 
-import constants
+from ..control import constants 
 import pid
 import detection.path
 import detection.crosswalk
