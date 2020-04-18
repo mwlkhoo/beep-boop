@@ -17,16 +17,21 @@ def state(img, crosswalk):
     state_sum = [sum([1 for dim in img[constants.PATH_INIT_H:constants.H:STEP, SECS[incr]:SECS[incr + 1]:STEP] 
         for pix in dim if pix > constants.BW_LIM]) for incr in range(0,6)]
 
+    # Determine where greatest weight of white line is within left side
     if(np.sum(state_sum[0:3]) > SEC_LIM):
         state.append(np.argmax(state_sum[0:3]))
+    # No white line found on left side
     else:
         state.append(-1)
 
+    # Determine where greatest weight of white line is within right side
     if(np.sum(state_sum[3:6]) > SEC_LIM):
         state.append(2 - np.argmax(state_sum[3:6]))
+    # No white line found on right side
     else:
         state.append(-1)
 
+    # Compensate for extra white lines from crosswalk
     if crosswalk[1]:
         state[0] -= 0.06
     
