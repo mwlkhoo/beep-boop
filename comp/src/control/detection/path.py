@@ -28,12 +28,12 @@ def state(img, crosswalk):
         state.append(-1)
 
     if crosswalk[1]:
-        state[0] -= 0.08
+        state[0] -= 0.06
     
     return state
 
 
-CORNER_LIM = 120    # was 225 before
+CORNER_LIM = 160    # was 225 before
 
 def corner(img):
 

@@ -2,12 +2,12 @@
 
 # For PID tuning:
 P = 2.6
-P_ANG = 2.2 # was 3.5 before
+P_ANG = 2.7 # was 3.5 before
 
 BASE_VEL = 0.1*P
 SCALE_VEL = 0.04*P
 
-SCALE_ANG = 0.04*P_ANG*P
+SCALE_ANG = 0.03*P_ANG*P 	# 0.04
 CONST_ANG = 0.3*P_ANG*P
 
 # # For PID tuning: (SLOWER BUT MORE PRECISE)

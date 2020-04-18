@@ -34,12 +34,12 @@ NO_PED_COUNT_LIM = 25       # either really small or really big bc of the delay
 AFTER_PED_COUNT_LIM = 5
 CROSSING_COUNT_LIM = 7 # with Kazam, use 7
 RUSHING_FACTOR = 1.4
-COUNT_DETECT_MODE_LIM = 100
+COUNT_DETECT_MODE_LIM = 95
+LOOP_COUNT_LIM = 95
 CORRECTED_COUNT_DETECT_MODE_LIM = 250
-LOOP_COUNT_LIM = 100
 CORRECTED_LOOP_COUNT_LIM = 250
-LESS_COUNT_DETECT_MODE_LIM = 160
-LESS_LOOP_COUNT_LIM = 160
+LESS_COUNT_DETECT_MODE_LIM = 155
+LESS_LOOP_COUNT_LIM = 155
 TIME_LIM = 240            # change this to 240
 NO_PLATE_MOVE_ON_LIM = 1
 
@@ -255,7 +255,7 @@ class Control(object):
                 if self.detected_corner:
                     print("found corner! now sweeping!!!")
                     self.move.linear.x = 0
-                    self.move.angular.z = -1.3 * constants.CONST_ANG
+                    self.move.angular.z = -1.4 * constants.CONST_ANG
             
             if self.detected_corner and state == [0, 1]:
                 print("found plate! stop sweeping")
