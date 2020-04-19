@@ -44,7 +44,7 @@ LAST_COUNT_DETECT_MODE_LIM = 999
 LAST_LOOP_COUNT_LIM = 999
 TIME_LIM = 240            # change this to 240
 NO_PLATE_MOVE_ON_LIM = 2
-LAST_CORNER_COUNT_LIM = 90
+LAST_CORNER_COUNT_LIM = 98
 
 # START_CW_DETECT = 0
 # LET_GO_LIM = 175
@@ -467,7 +467,7 @@ class Control(object):
 
         if (not self.passedCW and not self.detected_pedestrian) or (self.passedCW and self.foundPlate):
 
-            if self.thirdCorCount > 175 or (not self.savedImage and self.count_detect_mode > used_count_detect_mode_lim):
+            if self.thirdCorCount > 162 or (not self.savedImage and self.count_detect_mode > used_count_detect_mode_lim):
                 print("checking for plates")
                 if self.noPlateCount < NO_PLATE_MOVE_ON_LIM or self.foundPlate:
 
