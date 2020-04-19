@@ -4,26 +4,16 @@ import numpy as np
 
 import constants
 
-# P = 0.8
-# P_ANG = 3.5
-
-# P_WALL = 1.2
-
-
-# BASE_VEL = 0.2*P
-# SCALE_VEL = 0.1*P
-
-# SCALE_ANG = 0.14*P_ANG*P
-# CONST_ANG = 0.4*P_ANG*P
-
 def update(move, state):
 
+	# Normal operation
     if(not sum(state) is -2):
         move.linear.x = constants.BASE_VEL - abs(state[1]-state[0])*constants.SCALE_VEL
         move.angular.z = (state[1]-state[0])*constants.SCALE_ANG
-    else:
+    # If no white lines are seen
+    else: 
         move.linear.x = 0
-        move.angular.z = -1 *constants.CONST_ANG
+        move.angular.z = -0.2 *constants.CONST_ANG
 
 # P = 2
 # P_ANG = 2
@@ -49,3 +39,4 @@ def update(move, state):
 #     else:
 #         move.linear.x = -BASE_VEL
 #         move.angular.z = -CONST_ANG
+

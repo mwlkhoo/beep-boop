@@ -54,10 +54,12 @@ class Plate_Reader(object):
         # change to anki's camera later
         # while(True):
             # getting the saved image (saved in plate_locator.py)
-        start_platereader_time = time.time()
+        # start_platereader_time = time.time()
 
-        gray_parking = cv2.imread('../parking.png', cv2.IMREAD_GRAYSCALE)
-        gray_plate = cv2.imread('../plate.png', cv2.IMREAD_GRAYSCALE)
+        gray_parking = cv2.imread('../control/parking.png', cv2.IMREAD_GRAYSCALE)
+        gray_plate = cv2.imread('../control/plate.png', cv2.IMREAD_GRAYSCALE)
+
+        # print(gray_parking)
         
         parking_num_raw = cv2.merge((gray_parking, gray_parking, gray_parking))
         plate_num_raw = cv2.merge((gray_plate, gray_plate, gray_plate))
@@ -185,18 +187,18 @@ class Plate_Reader(object):
         pred_index_p2 = np.argmax(y_predict_p2[10:36])
         pred_index_p3 = np.argmax(y_predict_p3[:10])
         pred_index_p4 = np.argmax(y_predict_p4[:10])
-        print("this should be lhs")
-        print(y_predict_park_lhs)
-        print("this should be rhs")
-        print(y_predict_park_rhs)
-        print("this should be p1")
-        print(y_predict_p1)
-        print("this should be p2")
-        print(y_predict_p2)
-        print("this should be p3")
-        print(y_predict_p3)
-        print("this should be p4")
-        print(y_predict_p4)
+        # print("this should be lhs")
+        # print(y_predict_park_lhs)
+        # print("this should be rhs")
+        # print(y_predict_park_rhs)
+        # print("this should be p1")
+        # print(y_predict_p1)
+        # print("this should be p2")
+        # print(y_predict_p2)
+        # print("this should be p3")
+        # print(y_predict_p3)
+        # print("this should be p4")
+        # print(y_predict_p4)
 
         # Plate Reading Correction
         # start_correcting_time = time.time()
@@ -352,7 +354,7 @@ class Plate_Reader(object):
         if pred_index_p4 == 9 and y_predict_p4[31] > 0.85 and y_predict_p4[0] > 0.0001:
             pred_index_p4 = 0
 
-        print(float((y_predict_p4[9] - y_predict_p4[8])) / float(y_predict_p4[8]))
+        # print(float((y_predict_p4[9] - y_predict_p4[8])) / float(y_predict_p4[8]))
         # correcting '9' to '8' if the difference between them is smaller than 0.003
         if pred_index_park_rhs == 9 and float((y_predict_park_rhs[9] - y_predict_park_rhs[8])) / float(y_predict_park_rhs[8]) < 10:
             pred_index_park_rhs = 8

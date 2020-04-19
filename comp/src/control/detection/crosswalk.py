@@ -13,13 +13,16 @@ SEC_LIM_ALL = 0
 
 def detect(img):
 
+	# Look at a smaller portion of img for stop position of crosswalk
 	img_sample_stop = img[constants.CW_SAMPLE_START:constants.CW_SAMPLE_END:STEP,constants.CW_L:constants.CW_R:STEP]
 	rows_stop = img_sample_stop.shape[0]
 
+	# Look at smaller portion of img for every other portion of crosswalk
 	img_sample_all = np.vstack([img[constants.CW_INIT_H:constants.CW_SAMPLE_START:STEP,constants.CW_L:constants.CW_R:STEP], 
 		img[constants.CW_SAMPLE_END:constants.H:STEP,constants.CW_L:constants.CW_R:STEP]])
 	rows_all = img_sample_all.shape[0]
 
+	# Count red pixels
 	all_rows_stop = [sum([1 for pix in img_sample_stop[incr] if (pix[2] > constants.R_LIM and pix[1] < constants.G_LIM and pix[0] < constants.B_LIM)])
 		for incr in range(0, rows_stop)]
 	all_rows_all = [sum([1 for pix in img_sample_all[incr] if (pix[2] > constants.R_LIM and pix[1] < constants.G_LIM and pix[0] < constants.B_LIM)]) 
