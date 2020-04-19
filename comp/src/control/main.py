@@ -40,11 +40,11 @@ CORRECTED_COUNT_DETECT_MODE_LIM = 250
 CORRECTED_LOOP_COUNT_LIM = 250
 LESS_COUNT_DETECT_MODE_LIM = 108
 LESS_LOOP_COUNT_LIM = 108
-LAST_COUNT_DETECT_MODE_LIM = 175
-LAST_LOOP_COUNT_LIM = 175
+LAST_COUNT_DETECT_MODE_LIM = 999
+LAST_LOOP_COUNT_LIM = 999
 TIME_LIM = 240            # change this to 240
 NO_PLATE_MOVE_ON_LIM = 2
-LAST_CORNER_COUNT_LIM = 88
+LAST_CORNER_COUNT_LIM = 90
 
 # START_CW_DETECT = 0
 # LET_GO_LIM = 175
@@ -96,6 +96,7 @@ class Control(object):
         self.thirdCor = False
         self.thirdCorCount = 0
         self.countCWCorner = 0
+        self.lastCorner = False
 
 
         print("initialized success")
@@ -326,7 +327,7 @@ class Control(object):
             if not self.thirdCor:
                 self.thirdCorCount += 1
                 self.move.linear.x *= RUSHING_FACTOR
-                if self.thirdCorCount > LAST_CORNER_COUNT_LIM:
+                if self.thirdCorCount > LAST_CORNER_COUNT_LIM and not self.lastCorner:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
                     self.move.angular.z = -2.3 * constants.CONST_ANG
@@ -387,6 +388,8 @@ class Control(object):
                     self.detected_corner = False
                     self.move.linear.x = 0
                     self.move.angular.z = 0
+                    if self.passedCW:
+                        self.lastCorner = True
 
             if not self.firstCor and self.detected_corner and state == [2, -1] and my_plate_locator.numSavedImages == 2:
                 print("found plate! stop sweeping")
@@ -463,7 +466,7 @@ class Control(object):
 
         if (not self.passedCW and not self.detected_pedestrian) or (self.passedCW and self.foundPlate):
 
-            if not self.savedImage and self.count_detect_mode > used_count_detect_mode_lim:
+            if self.thirdCorCount > 180 or (not self.savedImage and self.count_detect_mode > used_count_detect_mode_lim):
                 print("checking for plates")
                 if self.noPlateCount < NO_PLATE_MOVE_ON_LIM or self.foundPlate:
 
