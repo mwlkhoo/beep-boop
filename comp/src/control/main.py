@@ -45,6 +45,7 @@ LAST_LOOP_COUNT_LIM = 999
 TIME_LIM = 240            # change this to 240
 NO_PLATE_MOVE_ON_LIM = 2
 LAST_CORNER_COUNT_LIM = 98
+LAST_PLATE_COUNT_LIM = 180
 
 # START_CW_DETECT = 0
 # LET_GO_LIM = 175
@@ -328,12 +329,12 @@ class Control(object):
             if not self.thirdCor:
                 self.thirdCorCount += 1
                 self.move.linear.x *= RUSHING_FACTOR
-                if self.thirdCorCount > LAST_CORNER_COUNT_LIM and self.thirdCorCount < LAST_CORNER_COUNT_LIM + 25 and not self.lastCorner:
+                if self.thirdCorCount > LAST_CORNER_COUNT_LIM and self.thirdCorCount < LAST_CORNER_COUNT_LIM + 40 and not self.lastCorner:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
                     self.move.angular.z = -2.3 * constants.CONST_ANG
 
-                if self.thirdCorCount >= LAST_CORNER_COUNT_LIM + 25:
+                if self.thirdCorCount >= LAST_CORNER_COUNT_LIM + 40:
                     self.lastCorner = True
                     
 
@@ -470,7 +471,7 @@ class Control(object):
 
         if (not self.passedCW and not self.detected_pedestrian) or (self.passedCW and self.foundPlate):
 
-            if self.thirdCorCount > 171 or (not self.savedImage and self.count_detect_mode > used_count_detect_mode_lim):
+            if self.thirdCorCount > LAST_PLATE_COUNT_LIM or (not self.savedImage and self.count_detect_mode > used_count_detect_mode_lim):
                 print("checking for plates")
                 if self.noPlateCount < NO_PLATE_MOVE_ON_LIM or self.foundPlate:
 
