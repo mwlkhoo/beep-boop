@@ -38,13 +38,13 @@ COUNT_DETECT_MODE_LIM = 88
 LOOP_COUNT_LIM = 88
 CORRECTED_COUNT_DETECT_MODE_LIM = 250
 CORRECTED_LOOP_COUNT_LIM = 250
-LESS_COUNT_DETECT_MODE_LIM = 110
-LESS_LOOP_COUNT_LIM = 110
+LESS_COUNT_DETECT_MODE_LIM = 108
+LESS_LOOP_COUNT_LIM = 108
 LAST_COUNT_DETECT_MODE_LIM = 180
 LAST_LOOP_COUNT_LIM = 180
 TIME_LIM = 240            # change this to 240
-NO_PLATE_MOVE_ON_LIM = 1
-LAST_CORNER_COUNT_LIM = 120
+NO_PLATE_MOVE_ON_LIM = 2
+LAST_CORNER_COUNT_LIM = 105
 
 # START_CW_DETECT = 0
 # LET_GO_LIM = 175
@@ -305,10 +305,10 @@ class Control(object):
         if self.secondCW:
             if not self.foundPlate and detection.path.corner(gr_cap):
                 self.countCWCorner += 1
-                if self.countCWCorner > 3:
+                if self.countCWCorner > 5:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
-                    self.move.angular.z = -2.5 * constants.CONST_ANG
+                    self.move.angular.z = -1.8 * constants.CONST_ANG
                     self.detected_corner = True
 
         if my_plate_locator.numSavedImages == 2:
@@ -328,7 +328,7 @@ class Control(object):
                 if self.thirdCorCount > LAST_CORNER_COUNT_LIM:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
-                    self.move.angular.z = -2.5 * constants.CONST_ANG
+                    self.move.angular.z = -2.3 * constants.CONST_ANG
                     self.detected_corner = True
 
 
@@ -379,7 +379,7 @@ class Control(object):
                     self.move.linear.x = 0
                     self.move.angular.z = 0
 
-            if self.detected_corner and state == [2, 2]:
+            if self.detected_corner and state == [0, 1]:
                 if my_plate_locator.numSavedImages == 4:
                     print("found plate! stop sweeping")
                     self.foundPlate = True
