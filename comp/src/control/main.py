@@ -305,7 +305,7 @@ class Control(object):
         if self.secondCW:
             if not self.foundPlate and detection.path.corner(gr_cap):
                 self.countCWCorner += 1
-                if self.countCWCorner > 2:
+                if self.countCWCorner > 3:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
                     self.move.angular.z = -1.5 * constants.CONST_ANG
@@ -328,7 +328,7 @@ class Control(object):
                 if self.thirdCorCount > LAST_CORNER_COUNT_LIM:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
-                    self.move.angular.z = -1.8 * constants.CONST_ANG
+                    self.move.angular.z = -2.5 * constants.CONST_ANG
                     self.detected_corner = True
 
 
