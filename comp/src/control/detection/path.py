@@ -33,7 +33,7 @@ def state(img, crosswalk):
 
     # Compensate for extra white lines from crosswalk
     if crosswalk[1]:
-        state[0] -= 0.1
+        state[0] -= 0.5
     
     return state
 
