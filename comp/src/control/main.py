@@ -466,7 +466,7 @@ class Control(object):
 
         if (not self.passedCW and not self.detected_pedestrian) or (self.passedCW and self.foundPlate):
 
-            if self.thirdCorCount > 180 or (not self.savedImage and self.count_detect_mode > used_count_detect_mode_lim):
+            if self.thirdCorCount > 175 or (not self.savedImage and self.count_detect_mode > used_count_detect_mode_lim):
                 print("checking for plates")
                 if self.noPlateCount < NO_PLATE_MOVE_ON_LIM or self.foundPlate:
 
