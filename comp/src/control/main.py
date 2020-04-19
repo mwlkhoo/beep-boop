@@ -328,11 +328,11 @@ class Control(object):
             if not self.thirdCor:
                 self.thirdCorCount += 1
                 self.move.linear.x *= RUSHING_FACTOR
-                if self.thirdCorCount > LAST_CORNER_COUNT_LIM and not self.lastCorner:
+                if self.thirdCorCount > LAST_CORNER_COUNT_LIM and self.thirdCorCount < LAST_CORNER_COUNT_LIM + 5 and not self.lastCorner:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
                     self.move.angular.z = -2.3 * constants.CONST_ANG
-                    self.detected_corner = True
+                    
 
 
         # !!!!!!! ONLY do these when not in the process of stopping and reading plate.
