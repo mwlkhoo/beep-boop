@@ -303,10 +303,12 @@ class Control(object):
 
         if self.secondCW:
             if not self.foundPlate and detection.path.corner(gr_cap):
-                print("found corner!!! now sweeping!!!")
-                self.move.linear.x = 0
-                self.move.angular.z = -1.5 * constants.CONST_ANG
-                self.detected_corner = True
+                self.countCWCorner += 1
+                if self.countCWCorner > 5:
+                    print("found corner!!! now sweeping!!!")
+                    self.move.linear.x = 0
+                    self.move.angular.z = -1.5 * constants.CONST_ANG
+                    self.detected_corner = True
 
         if my_plate_locator.numSavedImages == 2:
             if not self.firstCor:
