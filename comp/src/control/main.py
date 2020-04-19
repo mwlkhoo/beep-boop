@@ -236,7 +236,7 @@ class Control(object):
 
                     else:   # no pedestrian
                         if not self.detected_pedestrian:
-                            used_no_ped_count_lim = 5
+                            used_no_ped_count_lim = 0
 
                         else:
                             used_no_ped_count_lim = 0
