@@ -305,7 +305,7 @@ class Control(object):
             if not self.foundPlate and detection.path.corner(gr_cap):
                 print("found corner!!! now sweeping!!!")
                 self.move.linear.x = 0
-                self.move.angular.z = -1.8 * constants.CONST_ANG
+                self.move.angular.z = -1.7 * constants.CONST_ANG
                 self.detected_corner = True
 
         if my_plate_locator.numSavedImages == 2:
