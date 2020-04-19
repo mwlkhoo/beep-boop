@@ -328,7 +328,7 @@ class Control(object):
                 if self.thirdCorCount > LAST_CORNER_COUNT_LIM:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
-                    self.move.angular.z = -1.6 * constants.CONST_ANG
+                    self.move.angular.z = -1.8 * constants.CONST_ANG
                     self.detected_corner = True
 
 
