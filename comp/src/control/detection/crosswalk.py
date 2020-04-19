@@ -32,3 +32,14 @@ def detect(img):
 		 sum([1 for incr in range(0, rows_all-1) if (all_rows_all[incr] + all_rows_all[incr+1]) > ROW_LIM_ALL]) > SEC_LIM_ALL]
 
 
+SEC_LIM = 1000
+
+def corner(img):
+
+	# Look at right side of img for crosswalk
+	img_sample = img[constants.PATH_INIT_H:constants.H:2, constants.CW_CORNER_L:constants.W:2]
+
+	print(sum([1 for dim in img_sample for pix in dim if (pix[2] > constants.R_LIM and pix[1] < constants.G_LIM and pix[0] < constants.B_LIM)]))
+
+	# Count red pixels
+	return sum([1 for dim in img_sample for pix in dim if (pix[2] > constants.R_LIM and pix[1] < constants.G_LIM and pix[0] < constants.B_LIM)]) > SEC_LIM

@@ -10,7 +10,7 @@ SEC_LIM = 4000/9
 # Edge sections have width of 106 px, middle sections have width of 107 px
 SECS = [0, 106, 213, 320, 427, 534, 640]
 
-def state(img, crosswalk):
+def state(img, cw, cw_corner):
 
     state = []
 
@@ -31,9 +31,11 @@ def state(img, crosswalk):
     else:
         state.append(-1)
 
-    # Compensate for extra white lines from crosswalk
-    if crosswalk[1]:
+    # Compensate for extra white lines from cw
+    if cw[1]:
         state[0] -= 0.1
+    if cw_corner:
+        state[1] -= 1
     
     return state
 

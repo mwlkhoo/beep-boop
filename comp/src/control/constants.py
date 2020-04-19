@@ -46,6 +46,9 @@ CW_SAMPLE_END = 400
 CW_L = int(W/5)
 CW_R = int(W*4/5)
 
+# For crosswalk corner detection:
+CW_CORNER_L = 400
+
 # For corner detection:
 CORNER_L = int(W*10/21)
 CORNER_R = int(W*11/21)

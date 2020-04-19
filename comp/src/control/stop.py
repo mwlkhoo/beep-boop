@@ -58,54 +58,51 @@ class Control(object):
         # self.count_loop = 0
         # self.numSavedImages = 0
 
-        # Set up in-simulation timer    
-        ready = raw_input("Ready? > ")  
-        if ready == 'Ready':    
-            print("Ready!") 
-            self.time_elapsed = 0   
-            self.time_start = rospy.get_time()  
-            rospy.Subscriber("rrbot/camera1/image_raw",Image,self.callback, queue_size = 1)
+        # # Set up in-simulation timer    
+        # ready = raw_input("Ready? > ")  
+        # if ready == 'Ready':    
+        #     print("Ready!") 
+        #     self.time_elapsed = 0   
+        #     self.time_start = rospy.get_time()  
+        rospy.Subscriber("rrbot/camera1/image_raw",Image,self.callback, queue_size = 1)
 
     def callback(self,data):
 
         try:    
-            if not self.allDone:    
-                time_elapsed = rospy.get_time() - self.time_start   
-            if time_elapsed < 240 and not self.allDone: 
-                # print("trying to capture frame")    
-                raw_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
-                gr_cap = self.bridge.imgmsg_to_cv2(data, "mono8")
+            # print("trying to capture frame")    
+            raw_cap = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            gr_cap = self.bridge.imgmsg_to_cv2(data, "mono8")
 
-                if self.first_run:
-                    # getting properties of video
-                    frame_shape = raw_cap.shape
-                    print(frame_shape)
-                    self.frame_height = frame_shape[0]
-                    self.frame_width = frame_shape[1]
-                    self.first_run = False  
+            if self.first_run:
+                # getting properties of video
+                frame_shape = raw_cap.shape
+                print(frame_shape)
+                self.frame_height = frame_shape[0]
+                self.frame_width = frame_shape[1]
+                self.first_run = False  
 
-                self.main(raw_cap, gr_cap)
+            self.main(raw_cap, gr_cap)
 
 
         except CvBridgeError as e:
             print(e)
 
-    def shut_down_hook(self):   
-        print("Elapsed time in seconds:")   
-        print(self.time_elapsed)    
+    # def shut_down_hook(self):   
+    #     print("Elapsed time in seconds:")   
+    #     print(self.time_elapsed)    
 
     def main(self, raw_cap, gr_cap):
 
-        print(detection.crosswalk.detect(raw_cap))
+        print(detection.crosswalk.corner(raw_cap))
 
         self.move.linear.x = 0
         self.move.angular.z = 0
         self.pub.publish(self.move)
 
-        gr_cap = cv2.rectangle(gr_cap, (int(constants.W*10/21),375), (int(constants.W*11/21),415), (255,0,0), 2) 
+        raw_cap = cv2.rectangle(raw_cap, (constants.CW_CORNER_L, constants.PATH_INIT_H,), (constants.W, constants.H), (255,0,0), 2) 
         # img_sample = gr_cap[int(constants.H*18/25):int(constants.H*19/25),int(constants.W*10/21):int(constants.W*11/21)]
 
-        cv2.imshow("robot cap", gr_cap)
+        cv2.imshow("robot cap", raw_cap)
         cv2.waitKey(1)
 
        
