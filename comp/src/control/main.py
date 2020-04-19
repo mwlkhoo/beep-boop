@@ -329,12 +329,12 @@ class Control(object):
             if not self.thirdCor:
                 self.thirdCorCount += 1
                 self.move.linear.x *= RUSHING_FACTOR
-                if self.thirdCorCount > LAST_CORNER_COUNT_LIM and self.thirdCorCount < LAST_CORNER_COUNT_LIM + 80 and not self.lastCorner:
+                if self.thirdCorCount > LAST_CORNER_COUNT_LIM and self.thirdCorCount < LAST_CORNER_COUNT_LIM + 10 and not self.lastCorner:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
                     self.move.angular.z = -2.3 * constants.CONST_ANG
 
-                if self.thirdCorCount >= LAST_CORNER_COUNT_LIM + 80:
+                if self.thirdCorCount >= LAST_CORNER_COUNT_LIM + 10:
                     self.lastCorner = True
                     
 
@@ -425,8 +425,9 @@ class Control(object):
 
         # Get/set velocities only when crosswalk is not present 
         if not self.getBackOut and not self.stopForPlate and self.entering_cw < CROSSING_COUNT_LIM + 2 and not self.detected_pedestrian and not self.detected_corner:
-            print("updating pid")
-            pid.update(self.move, state)
+            if self.thirdCorCount <= LAST_CORNER_COUNT_LIM or self.thirdCorCount >= LAST_CORNER_COUNT_LIM + 10:
+                print("updating pid")
+                pid.update(self.move, state)
 
         if self.getBackOut and self.getBackOut_count > 6:
             print("finishing getting back out now")
