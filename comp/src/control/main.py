@@ -45,7 +45,7 @@ LAST_LOOP_COUNT_LIM = 999
 TIME_LIM = 240            # change this to 240
 NO_PLATE_MOVE_ON_LIM = 2
 LAST_CORNER_COUNT_LIM = 98
-LAST_PLATE_COUNT_LIM = 180
+LAST_PLATE_COUNT_LIM = 220
 
 # START_CW_DETECT = 0
 # LET_GO_LIM = 175
@@ -329,12 +329,12 @@ class Control(object):
             if not self.thirdCor:
                 self.thirdCorCount += 1
                 self.move.linear.x *= RUSHING_FACTOR
-                if self.thirdCorCount > LAST_CORNER_COUNT_LIM and self.thirdCorCount < LAST_CORNER_COUNT_LIM + 40 and not self.lastCorner:
+                if self.thirdCorCount > LAST_CORNER_COUNT_LIM and self.thirdCorCount < LAST_CORNER_COUNT_LIM + 80 and not self.lastCorner:
                     print("found corner!!! now sweeping!!!")
                     self.move.linear.x = 0
                     self.move.angular.z = -2.3 * constants.CONST_ANG
 
-                if self.thirdCorCount >= LAST_CORNER_COUNT_LIM + 40:
+                if self.thirdCorCount >= LAST_CORNER_COUNT_LIM + 80:
                     self.lastCorner = True
                     
 
