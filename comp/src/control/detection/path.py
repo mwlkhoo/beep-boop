@@ -33,12 +33,12 @@ def state(img, crosswalk):
 
     # Compensate for extra white lines from crosswalk
     if crosswalk[1]:
-        state[0] -= 0.06
+        state[0] -= 0.1
     
     return state
 
 
-CORNER_LIM = 160    # was 225 before
+CORNER_LIM = 100    # was 225 before
 
 def corner(img):
 

@@ -31,15 +31,15 @@ from license_plate_reader.plate_locator import Plate_Locator
 my_plate_locator = Plate_Locator()
 
 NO_PED_COUNT_LIM = 25       # either really small or really big bc of the delay
-AFTER_PED_COUNT_LIM = 5
-CROSSING_COUNT_LIM = 7 # with Kazam, use 7
-RUSHING_FACTOR = 1.4
-COUNT_DETECT_MODE_LIM = 95
-LOOP_COUNT_LIM = 95
+AFTER_PED_COUNT_LIM = 8
+CROSSING_COUNT_LIM = 8 
+RUSHING_FACTOR = 2.0
+COUNT_DETECT_MODE_LIM = 88
+LOOP_COUNT_LIM = 88
 CORRECTED_COUNT_DETECT_MODE_LIM = 250
 CORRECTED_LOOP_COUNT_LIM = 250
-LESS_COUNT_DETECT_MODE_LIM = 155
-LESS_LOOP_COUNT_LIM = 155
+LESS_COUNT_DETECT_MODE_LIM = 125
+LESS_LOOP_COUNT_LIM = 125
 TIME_LIM = 240            # change this to 240
 NO_PLATE_MOVE_ON_LIM = 1
 
@@ -122,6 +122,7 @@ class Control(object):
 
             else:
                 self.allDone = True
+                my_plate_locator.result_file.close()
                 if not self.doneEarly:
                     self.time_elapsed = time_elapsed
                 print("All Done! Stopping simulation and timer...")
@@ -133,6 +134,11 @@ class Control(object):
 
     def shut_down_hook(self):   
         print("Elapsed time in seconds:" + str(self.time_elapsed))
+        f = open('result_file.txt', 'r')
+        contents = f.readlines()
+        for result in contents:
+            print(contents)
+        f.close()
 
     # Detect crosswalk & pedestrian
     def crosswalkFunc(self, raw_cap):
@@ -205,7 +211,7 @@ class Control(object):
         print("crosswalk stuff:")
         print("crosswalk: " + str(self.detected_crosswalk))
         print("pedestrian: " + str(self.detected_pedestrian))
-        print("no ped count:" + str(self.no_ped_count))
+        # print("no ped count:" + str(self.no_ped_count))
         print("seen redline this many times: " + str(self.entering_cw))
         print("has it passed crosswalk yet: " + str(self.passedCW))
         print("has it seen corner yet: " + str(self.detected_corner))
@@ -213,14 +219,14 @@ class Control(object):
         print("----------------")
         print("plate stuff:")
         print("this is count_detect_mode:" + str(self.count_detect_mode))
-        print("this is count_loop_save:" + str(self.count_loop_save))
-        print("has not successfully got a plate for:" + str(self.noPlateCount))
+        # print("this is count_loop_save:" + str(self.count_loop_save))
+        # print("has not successfully got a plate for:" + str(self.noPlateCount))
         print("has it stopped to read plate yet?" + str(self.stopForPlate))
         print("has image been saved yet?" + str(self.savedImage))
         print("this many images have been saved:" + str(my_plate_locator.numSavedImages))
-        print("is it getting back out:" + str(self.getBackOut))
+        # print("is it getting back out:" + str(self.getBackOut))
 
-        if my_plate_locator.numSavedImages > 3:     # can be changed to 4
+        if my_plate_locator.numSavedImages == 4:     # can be changed to 5
             self.allDone = True
             self.doneEarly = True
             self.time_elapsed = rospy.get_time() - self.time_start
