@@ -281,6 +281,7 @@ class Control(object):
         print("has it passed crosswalk yet: " + str(self.passedCW))
         print("has it seen corner yet: " + str(self.detected_corner))
         print("has it found plate yet: " + str(self.foundPlate))
+        print("has it seen last corner yet:" + str(self.lastCorner))
         print("this is 3rd corner count:" + str(self.thirdCorCount))
         print("----------------")
         print("plate stuff:")
