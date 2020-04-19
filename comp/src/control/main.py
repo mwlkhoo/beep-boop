@@ -236,10 +236,10 @@ class Control(object):
 
                     else:   # no pedestrian
                         if not self.detected_pedestrian:
-                            used_no_ped_count_lim = NO_PED_COUNT_LIM * 2
+                            used_no_ped_count_lim = NO_PED_COUNT_LIM
 
                         else:
-                            used_no_ped_count_lim = AFTER_PED_COUNT_LIM * 2
+                            used_no_ped_count_lim = AFTER_PED_COUNT_LIM
 
                         # print("using this as no_ped_count_lim:" + str(used_no_ped_count_lim))
 
