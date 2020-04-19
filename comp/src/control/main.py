@@ -247,7 +247,7 @@ class Control(object):
                         # print("waiting no pedestrian to stablize")
                             # if no pedestrian for a long time, move on
 
-                        if self.no_ped_count == used_no_ped_count_lim:
+                        if self.no_ped_count > used_no_ped_count_lim:
                             print("now letting bot go bc road is clear")
                             self.detected_pedestrian = False
                             self.detected_crosswalk[0] = False
