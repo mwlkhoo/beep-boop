@@ -95,6 +95,7 @@ class Control(object):
         self.firstCor = False
         self.thirdCor = False
         self.thirdCorCount = 0
+        self.countCWCorner = 0
 
 
         print("initialized success")
