@@ -1,5 +1,5 @@
 ## Labs
-Lab 1:
+#### Lab 1:
 * Linux wouldn’t bootload on my laptop, so I used Colabatory/worked with Karina for later labs until getting a computer that works with Linux
 
 #### Lab 2
